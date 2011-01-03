@@ -1,9 +1,10 @@
 #ifndef HAX_FFTW_DATA_H
 #define HAX_FFTW_DATA_H
 
+#include "haxgeneric.hpp"
 
-class hax_fftw_data
-{
+class hax_fftw_data{
+
   public:
     hax_fftw_data(uint32_t frames);
     ~hax_fftw_data();

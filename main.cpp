@@ -8,6 +8,8 @@
 #include "headers/haxgeneric.hpp"
 #include "headers/haxsdl.hpp"
 //#include "headers/haxalsa.hpp"
+#include "headers/hax_fftw_data.h"
+#include "headers/hax_sdl_data.h"
 
 #define SCREENW 854
 #define SCREENH 480
@@ -15,27 +17,8 @@
 int main ( int argc, char** argv )
 {
 
-    /*  Alsa Initialization :3
-     *
-     */
-
-      /*snd_pcm_t **hax_device;
-
-      hax_device = (snd_pcm_t **) malloc(sizeof(snd_pcm_t *));
-
-      hax_device_conf_t hax_device_conf;
-
-      hax_device_conf.device_name  = (char *)"front";
-      hax_device_conf.n_channels   = 2;
-      hax_device_conf.sample_rate  = 48000;
-      hax_device_conf.buffer_size  = 2048;
-      hax_device_conf.period_size  = 64;
-
-      hax_alsa_initialiser(argc, argv, hax_device, &hax_device_conf);
-
-      std::cout << "PCM Interface pointer: " << hax_device << std::endl;*/
-
-    // End of Alsa Init.
+    hax_fftw_data * fftw_data = new hax_fftw_data(64);
+    hax_sdl_data * sdl_data = new hax_sdl_data(64);
 
     FPSmanager hax_fps;
     float displ = 0;

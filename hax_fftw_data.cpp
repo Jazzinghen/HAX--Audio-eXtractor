@@ -1,13 +1,13 @@
-#include "hax_fftw_data.h"
+#include "headers/hax_fftw_data.h"
 
 hax_fftw_data::hax_fftw_data(uint32_t frames)
 {
 
   pthread_mutexattr_t mutex_attr;
 
-  left_sound_channel = calloc(frames, sizeof(int16_t));
-  right_sound_channel = calloc(frames, sizeof(int16_t));
-  this.frames = frames;
+  left_sound_channel = (int16_t *) calloc(frames, sizeof(int16_t));
+  right_sound_channel = (int16_t *) calloc(frames, sizeof(int16_t));
+  this->frames = frames;
 
   pthread_mutexattr_init(&mutex_attr);
   pthread_mutex_init(&protection_mutex, &mutex_attr);
@@ -18,6 +18,8 @@ hax_fftw_data::~hax_fftw_data()
 {
   free(left_sound_channel);
   free(right_sound_channel);
+
+  pthread_mutex_destroy(&protection_mutex);
 }
 
 void hax_fftw_data::populate_channels(int16_t * data){
