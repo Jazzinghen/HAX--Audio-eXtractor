@@ -1,0 +1,58 @@
+<?xml version="1.0" encoding="UTF-8" standalone="yes" ?>
+<CodeBlocks_project_file>
+	<FileVersion major="1" minor="6" />
+	<Project>
+		<Option title="Spectrum_Analyzer" />
+		<Option pch_mode="2" />
+		<Option compiler="gcc" />
+		<Build>
+			<Target title="Debug">
+				<Option output="bin/Debug/Spectrum_Analyzer" prefix_auto="1" extension_auto="1" />
+				<Option object_output="obj/Debug/" />
+				<Option type="1" />
+				<Option compiler="gcc" />
+				<Compiler>
+					<Add option="-Wall" />
+				</Compiler>
+				<Linker>
+					<Add option="-lSDL_gfx" />
+				</Linker>
+			</Target>
+			<Target title="Release">
+				<Option output="bin/Release/Spectrum_Analyzer" prefix_auto="1" extension_auto="1" />
+				<Option object_output="obj/Release/" />
+				<Option type="0" />
+				<Option compiler="gcc" />
+				<Compiler>
+					<Add option="-Wall" />
+					<Add option="/O2" />
+				</Compiler>
+			</Target>
+		</Build>
+		<Compiler>
+			<Add option="-Wall" />
+			<Add option="`sdl-config --cflags`" />
+		</Compiler>
+		<Linker>
+			<Add option="`sdl-config --libs` -lSDL_gfx -lasound" />
+		</Linker>
+		<Unit filename="cb.bmp">
+			<Option target="&lt;{~None~}&gt;" />
+		</Unit>
+		<Unit filename="haxalsa.cpp">
+			<Option target="Release" />
+		</Unit>
+		<Unit filename="haxsdl.cpp" />
+		<Unit filename="headers/haxalsa.hpp">
+			<Option target="Release" />
+		</Unit>
+		<Unit filename="headers/haxgeneric.hpp" />
+		<Unit filename="headers/haxsdl.hpp" />
+		<Unit filename="main.cpp" />
+		<Unit filename="threads.cpp" />
+		<Extensions>
+			<code_completion />
+			<debugger />
+		</Extensions>
+	</Project>
+</CodeBlocks_project_file>
