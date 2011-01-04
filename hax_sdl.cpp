@@ -1,9 +1,12 @@
-#include "headers/haxsdl.hpp"
+#include "headers/hax_sdl.hpp"
 #include <cmath>
 #include <iostream>
 
 #define PI 3.14159265
 #define DAMP_FACTOR 9001
+
+#define SCREENW 854
+#define SCREENH 480
 
 /*
  * This is a 32-bit pixel function created with help from this
@@ -35,7 +38,7 @@ void sine_graph(SDL_Surface *surface, float freq, float amplitude, float displ, 
   }
 }
 
-void draw_sound(SDL_Surface *surface, int size, Uint32 pixel) {
+void draw_sound(SDL_Surface *surface, int size, int16_t * left_channel, int16_t * right_channel, Uint32 pixel) {
   int i;
 
   short right[size];
@@ -104,4 +107,95 @@ void draw_circle(SDL_Surface *surface, int cx, int cy, int radius, Uint32 pixel)
             error -= x;
         }
     }
+}
+
+void * hax_sdl_main(void *configuration){
+
+    FPSmanager hax_fps;
+    float displ = 0;
+
+    char fpscount[30];
+
+    SDL_initFramerate(&hax_fps);
+    SDL_setFramerate(&hax_fps, 30);
+
+    // initialize SDL video
+    if ( SDL_Init( SDL_INIT_VIDEO ) < 0 )
+    {
+        printf( "Unable to init SDL: %s\n", SDL_GetError() );
+        pthread_exit((void *) 1);
+    }
+
+    // make sure SDL cleans up before exit
+    atexit(SDL_Quit);
+
+    // create a new window
+    SDL_Surface* screen = SDL_SetVideoMode(SCREENW, SCREENH, 32,
+                                           SDL_HWSURFACE|SDL_DOUBLEBUF);
+    if ( !screen )
+    {
+        printf("Unable to set 640x480 video: %s\n", SDL_GetError());
+        pthread_exit((void *) 1);
+    }
+
+    std::cout << screen->w/2 << std::endl;
+    std::cout << screen->h/2 << std::endl;
+
+    // program main loop
+    bool done = false;
+    while (!done)
+    {
+        // message processing loop
+        SDL_Event event;
+        while (SDL_PollEvent(&event))
+        {
+            // check for messages
+            switch (event.type)
+            {
+                // exit if the window is closed
+            case SDL_QUIT:
+                done = true;
+                break;
+
+                // check for keypresses
+            case SDL_KEYDOWN:
+                {
+                    // exit if ESCAPE is pressed
+                    if (event.key.keysym.sym == SDLK_ESCAPE)
+                        done = true;
+                    break;
+                }
+            } // end switch
+        } // end of message processing
+
+        // DRAWING STARTS HERE
+
+        // clear screen
+        SDL_FillRect(screen, 0, SDL_MapRGB(screen->format, 0, 0, 0));
+
+        // draw bitmap
+        // SDL_BlitSurface(bmp, 0, screen, &dstrect);
+
+        vlineColor(screen, screen->w / 2, 0, screen->h, 0xffffffff);
+        hlineColor(screen, 0, screen->w, screen->h / 2, 0xffffffff);
+
+        sine_graph(screen, 0.01, 60, displ, 0xff00ffff);
+
+        // Draw circle
+        draw_circle(screen, (screen->w / 2), (screen->h / 2), 60, 0xffffffff);
+
+        sprintf(fpscount, "%s%i", "Current FPS: ", SDL_getFramerate(&hax_fps));// + SDL_getFramerate(&hax_fps);
+        stringColor(screen, 10, 10, fpscount, 0xffffffff);
+        // DRAWING ENDS HERE
+
+        // finally, update the screen :)
+        SDL_Flip(screen);
+
+        displ ++;
+    } // end main loop
+
+    // all is well ;)
+
+    printf("Exited cleanly\n");
+    pthread_exit((void *) 0);
 }

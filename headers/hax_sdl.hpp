@@ -1,7 +1,9 @@
 #ifndef HAXSDL_HPP_INCLUDED
 #define HAXSDL_HPP_INCLUDED
 
-#include "haxgeneric.hpp"
+#include "hax_generic.hpp"
+
+void * hax_sdl_main(void *configuration);
 
 void set_pixel(SDL_Surface *surface, int x, int y, Uint32 pixel);
 

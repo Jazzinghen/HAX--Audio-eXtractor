@@ -34,27 +34,18 @@
 			<Add option="`sdl-config --cflags`" />
 		</Compiler>
 		<Linker>
-			<Add option="`sdl-config --libs` -lSDL_gfx -lasound" />
+			<Add option="`sdl-config --libs` -lSDL_gfx -lasound -lfftw3 -lm" />
 		</Linker>
 		<Unit filename="cb.bmp">
 			<Option target="&lt;{~None~}&gt;" />
 		</Unit>
 		<Unit filename="hax_fftw_data.cpp" />
 		<Unit filename="hax_sdl_data.cpp" />
-		<Unit filename="haxalsa.cpp">
-			<Option target="Release" />
-		</Unit>
-		<Unit filename="haxsdl.cpp" />
+		<Unit filename="hax_threads.cpp" />
 		<Unit filename="headers/hax_fftw_data.h" />
 		<Unit filename="headers/hax_sdl_data.h" />
 		<Unit filename="headers/hax_threads.hpp" />
-		<Unit filename="headers/haxalsa.hpp">
-			<Option target="Release" />
-		</Unit>
-		<Unit filename="headers/haxgeneric.hpp" />
-		<Unit filename="headers/haxsdl.hpp" />
 		<Unit filename="main.cpp" />
-		<Unit filename="threads.cpp" />
 		<Extensions>
 			<code_completion />
 			<debugger />

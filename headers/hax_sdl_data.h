@@ -3,7 +3,7 @@
 
 #include <fftw3.h>
 
-#include "haxgeneric.hpp"
+#include "hax_generic.hpp"
 
 class hax_sdl_data{
 

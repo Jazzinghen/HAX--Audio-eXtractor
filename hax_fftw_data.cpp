@@ -23,7 +23,7 @@ hax_fftw_data::~hax_fftw_data()
 }
 
 void hax_fftw_data::populate_channels(int16_t * data){
-  int i;
+  uint32_t i;
 
   for (i = 0; i < frames; i++){
     left_sound_channel[i] = data[i*2];

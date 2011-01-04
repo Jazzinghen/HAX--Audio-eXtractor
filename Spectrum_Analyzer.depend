@@ -185,13 +185,16 @@
 	"begin_code.h"
 	"close_code.h"
 
-1294076132 source:/home/jazzinghen/Documents/Università/RTOS & Middleware/Project/Spectrum_Analyzer/main.cpp
+1294155854 source:/home/jazzinghen/Documents/Università/RTOS & Middleware/Project/Spectrum_Analyzer/main.cpp
 	<cstdlib>
 	<stdlib.h>
-	"headers/haxgeneric.hpp"
-	"headers/haxsdl.hpp"
+	"headers/hax_generic.hpp"
+	"headers/hax_sdl.hpp"
 	"headers/hax_fftw_data.h"
 	"headers/hax_sdl_data.h"
+	"headers/hax_fftw.h"
+	"headers/hax_threads.hpp"
+	"headers/hax_generic.hpp"
 
 1293635279 /home/jazzinghen/Documents/Università/RTOS & Middleware/Project/Spectrum_Analyzer/headers/haxsdl.hpp
 	"haxgeneric.hpp"
@@ -226,23 +229,59 @@
 	<iostream>
 	<string>
 
-1294074296 source:/home/jazzinghen/Documents/Università/RTOS & Middleware/Project/Spectrum_Analyzer/hax_fftw_data.cpp
+1294152621 source:/home/jazzinghen/Documents/Università/RTOS & Middleware/Project/Spectrum_Analyzer/hax_fftw_data.cpp
 	"headers/hax_fftw_data.h"
 
-1294074761 /home/jazzinghen/Documents/Università/RTOS & Middleware/Project/Spectrum_Analyzer/headers/hax_fftw_data.h
-	"haxgeneric.hpp"
+1294157265 /home/jazzinghen/Documents/Università/RTOS & Middleware/Project/Spectrum_Analyzer/headers/hax_fftw_data.h
+	"hax_generic.hpp"
 
 1294074329 source:/home/jazzinghen/Documents/Università/RTOS & Middleware/Project/Spectrum_Analyzer/hax_sdl_data.cpp
 	"headers/hax_sdl_data.h"
 
-1294076607 /home/jazzinghen/Documents/Università/RTOS & Middleware/Project/Spectrum_Analyzer/headers/hax_sdl_data.h
+1294138184 /home/jazzinghen/Documents/Università/RTOS & Middleware/Project/Spectrum_Analyzer/headers/hax_sdl_data.h
 	<fftw3.h>
-	"haxgeneric.hpp"
+	"hax_generic.hpp"
 
-1294076086 source:/home/jazzinghen/Documents/Università/RTOS & Middleware/Project/Spectrum_Analyzer/hax_threads.cpp
+1294160840 source:/home/jazzinghen/Documents/Università/RTOS & Middleware/Project/Spectrum_Analyzer/hax_threads.cpp
 	"headers/hax_threads.hpp"
 
-1294076113 /home/jazzinghen/Documents/Università/RTOS & Middleware/Project/Spectrum_Analyzer/headers/hax_threads.hpp
+1294161065 /home/jazzinghen/Documents/Università/RTOS & Middleware/Project/Spectrum_Analyzer/headers/hax_threads.hpp
+	"hax_generic.hpp"
+
+1294162945 /home/jazzinghen/Documents/Università/RTOS & Middleware/Project/Spectrum_Analyzer/headers/hax_generic.hpp
+	<SDL/SDL.h>
+	<SDL.h>
+	"SDL_gfxPrimitives.h"
+	"SDL_framerate.h"
+	<alsa/asoundlib.h>
+	<getopt.h>
 	<pthread.h>
-	"haxgeneric.hpp"
+	<stdlib.h>
+	<sys/time.h>
+	<time.h>
+	<stdint.h>
+	<iostream>
+	<string>
+
+1294162329 source:/home/jazzinghen/Documents/Università/RTOS & Middleware/Project/Spectrum_Analyzer/hax_alsa.cpp
+	"headers/hax_alsa.hpp"
+	"headers/hax_sdl.hpp"
+	"headers/hax_threads.hpp"
+
+1294161161 /home/jazzinghen/Documents/Università/RTOS & Middleware/Project/Spectrum_Analyzer/headers/hax_alsa.hpp
+	"hax_generic.hpp"
+
+1294141014 /home/jazzinghen/Documents/Università/RTOS & Middleware/Project/Spectrum_Analyzer/headers/hax_sdl.hpp
+	"hax_generic.hpp"
+
+1294145810 source:/home/jazzinghen/Documents/Università/RTOS & Middleware/Project/Spectrum_Analyzer/hax_sdl.cpp
+	"headers/hax_sdl.hpp"
+	<cmath>
+	<iostream>
+
+1294155806 source:/home/jazzinghen/Documents/Università/RTOS & Middleware/Project/Spectrum_Analyzer/hax_fftw.cpp
+	"headers/hax_fftw.h"
+
+1294155780 /home/jazzinghen/Documents/Università/RTOS & Middleware/Project/Spectrum_Analyzer/headers/hax_fftw.h
+	"hax_fftw_data.h"
 

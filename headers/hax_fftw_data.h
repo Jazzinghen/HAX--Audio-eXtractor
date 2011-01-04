@@ -1,7 +1,7 @@
 #ifndef HAX_FFTW_DATA_H
 #define HAX_FFTW_DATA_H
 
-#include "haxgeneric.hpp"
+#include "hax_generic.hpp"
 
 class hax_fftw_data{
 

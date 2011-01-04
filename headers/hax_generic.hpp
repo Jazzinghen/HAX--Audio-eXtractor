@@ -1,7 +1,31 @@
-#ifndef HAXALSA_HPP_INCLUDED
-#define HAXALSA_HPP_INCLUDED
+#ifndef HAXGENERIC_HPP_INCLUDED
+#define HAXGENERIC_HPP_INCLUDED
 
-#include "haxgeneric.hpp"
+//#include <alsa/asoundlib.h>
+#ifdef __APPLE__
+#include <SDL/SDL.h>
+#else
+#include <SDL.h>
+#endif
+
+#include "SDL_gfxPrimitives.h"
+#include "SDL_framerate.h"
+
+#include <alsa/asoundlib.h>
+
+#include <getopt.h>
+
+#include <pthread.h>
+#include <stdlib.h>
+#include <sys/time.h>
+#include <time.h>
+#include <stdint.h>
+
+#include <iostream>
+#include <string>
+
+//#include "hax_threads.hpp"
+
 
 //general configuration parameters of the device
 typedef struct {
@@ -14,13 +38,7 @@ typedef struct {
     unsigned int sample_rate;           //frame rate
     snd_pcm_format_t sample_format;     //format of the samples
     snd_pcm_access_t access_type;       //PCM access type
-} hax_device_conf_t;
+    int access;
+} hax_general_settings_t;
 
-int direct_rw(snd_pcm_t *device, hax_device_conf_t cap_dev_params);
-int direct_mmap(snd_pcm_t *device, hax_device_conf_t cap_dev_params, SDL_Surface *surface);
-
-int xrun_recovery(snd_pcm_t *handle, int error);
-void help(void);
-void hax_alsa_initialiser(int argc, char** argv, snd_pcm_t **device, hax_device_conf_t *hax_device);
-
-#endif // HAXALSA_HPP_INCLUDED
+#endif // HAXGENERIC_HPP_INCLUDED

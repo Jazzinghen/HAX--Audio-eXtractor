@@ -5,112 +5,87 @@
 #endif
 
 
-#include "headers/haxgeneric.hpp"
-#include "headers/haxsdl.hpp"
-//#include "headers/haxalsa.hpp"
+#include "headers/hax_generic.hpp"
+#include "headers/hax_sdl.hpp"
+#include "headers/hax_alsa.hpp"
 #include "headers/hax_fftw_data.h"
 #include "headers/hax_sdl_data.h"
+#include "headers/hax_fftw.h"
+#include "headers/hax_threads.hpp"
+#include "headers/hax_generic.hpp"
 
-#define SCREENW 854
-#define SCREENH 480
+#define FRAMES 64
+#define START_TIEM 2000000
+
+typedef struct {
+    hax_sdl_data * sdl;
+    hax_fftw_data * fftw;
+} hax_fftw_cross_data_t;
 
 int main ( int argc, char** argv )
 {
+  hax_general_settings_t hax_settings;
+  hax_settings.access = 1;
 
-    hax_fftw_data * fftw_data = new hax_fftw_data(64);
-    hax_sdl_data * sdl_data = new hax_sdl_data(64);
+  struct option long_option[] =
+  {
 
-    FPSmanager hax_fps;
-    float displ = 0;
+      {"device", 1, NULL, 'd'},
+      {"rate", 1, NULL, 'r'},
+      {"channels", 1, NULL, 'c'},
+      {"method", 1, NULL, 'm'},
+      {"buffer", 1, NULL, 'b'},
+      {"period", 1, NULL, 'p'},
+      {"help", 0, NULL, 'h'},
+      {NULL, 0, NULL, 0},
+  };//needed for getopt_long
 
-    char fpscount[30];
+/************************** processing command line parameters ******************************/
+  while (1) {
+      int c;
+      if ((c = getopt_long(argc, argv, "d:r:c:m:b:p:h", long_option, NULL)) < 0)
+          break;
+      switch (c)
+      {
+          case 'd':
+              hax_settings.device_name = strdup(optarg);
+              break;
+          case 'r':
+              hax_settings.sample_rate = atoi(optarg);
+              hax_settings.sample_rate = hax_settings.sample_rate < 4000 ? 4000 : hax_settings.sample_rate;
+              hax_settings.sample_rate = hax_settings.sample_rate > 196000 ? 196000 : hax_settings.sample_rate;
+              break;
+          case 'c':
+              hax_settings.n_channels = atoi(optarg);
+              hax_settings.n_channels = hax_settings.n_channels < 1 ? 1 : hax_settings.n_channels;
+              hax_settings.n_channels = hax_settings.n_channels > 1024 ? 1024 : hax_settings.n_channels;
+              break;
+          case 'm':
+              hax_settings.access = atoi(optarg);
+              break;
+          case 'b':
+              hax_settings.buffer_size = atoi(optarg);
+              break;
+                      //  buffer_time(us) = 0.001 * buffer_size(frames) / rate(khz)
+          case 'p':
+              hax_settings.period_size = atoi(optarg);
+              break;
+          case 'h':
+              help();
+              exit(1);
+              break;
+      }
+  };
 
-    SDL_initFramerate(&hax_fps);
-    SDL_setFramerate(&hax_fps, 30);
+  hax_fftw_data * fftw_data = new hax_fftw_data(hax_settings.period_size);
+  hax_sdl_data * sdl_data = new hax_sdl_data(hax_settings.period_size);
+  hax_fftw_cross_data_t hax_fftw_cross_data = {sdl_data, fftw_data};
 
-    // initialize SDL video
-    if ( SDL_Init( SDL_INIT_VIDEO ) < 0 )
-    {
-        printf( "Unable to init SDL: %s\n", SDL_GetError() );
-        return 1;
-    }
+  hax_thread * sdl_thread = new hax_thread(hax_sdl_main, START_TIEM, 16666666, 1, (void *) sdl_data, hax_settings);
+  hax_thread * fftw_thread = new hax_thread(hax_fftw_main, START_TIEM, 100000, 2, (void *) &hax_fftw_cross_data, hax_settings);
 
-    // make sure SDL cleans up before exit
-    atexit(SDL_Quit);
+  sdl_thread->start();
+  fftw_thread->start();
 
-    // create a new window
-    SDL_Surface* screen = SDL_SetVideoMode(SCREENW, SCREENH, 32,
-                                           SDL_HWSURFACE|SDL_DOUBLEBUF);
-    if ( !screen )
-    {
-        printf("Unable to set 640x480 video: %s\n", SDL_GetError());
-        return 1;
-    }
-
-    std::cout << screen->w/2 << std::endl;
-    std::cout << screen->h/2 << std::endl;
-
-    // program main loop
-    bool done = false;
-    while (!done)
-    {
-        // message processing loop
-        SDL_Event event;
-        while (SDL_PollEvent(&event))
-        {
-            // check for messages
-            switch (event.type)
-            {
-                // exit if the window is closed
-            case SDL_QUIT:
-                done = true;
-                break;
-
-                // check for keypresses
-            case SDL_KEYDOWN:
-                {
-                    // exit if ESCAPE is pressed
-                    if (event.key.keysym.sym == SDLK_ESCAPE)
-                        done = true;
-                    break;
-                }
-            } // end switch
-        } // end of message processing
-
-        // DRAWING STARTS HERE
-
-        // clear screen
-        SDL_FillRect(screen, 0, SDL_MapRGB(screen->format, 0, 0, 0));
-
-        // draw bitmap
-        // SDL_BlitSurface(bmp, 0, screen, &dstrect);
-
-        vlineColor(screen, screen->w / 2, 0, screen->h, 0xffffffff);
-        hlineColor(screen, 0, screen->w, screen->h / 2, 0xffffffff);
-
-        //sine_graph(screen, 0.01, 60, displ, 0xff00ffff);
-
-        draw_sound(screen, 64, 0xff00ffff);
-
-        // Draw circle
-        draw_circle(screen, (screen->w / 2), (screen->h / 2), 60, 0xffffffff);
-
-        sprintf(fpscount, "%s%i", "Current FPS: ", SDL_getFramerate(&hax_fps));// + SDL_getFramerate(&hax_fps);
-        stringColor(screen, 10, 10, fpscount, 0xffffffff);
-        // DRAWING ENDS HERE
-
-        // finally, update the screen :)
-        SDL_Flip(screen);
-
-        displ ++;
-    } // end main loop
-
-    // all is well ;)
-
-
-    fprintf (stderr, "microphone: BYE BYE\n");
-    //closes the device
-    //snd_pcm_close (*hax_device);
-    printf("Exited cleanly\n");
-    return 0;
+  return 0;
 }

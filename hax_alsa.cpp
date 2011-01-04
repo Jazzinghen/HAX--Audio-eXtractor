@@ -1,9 +1,7 @@
 //Needed libraries
-#include <stdio.h>
-#include <stdlib.h>
-#include <getopt.h>
-#include "headers/haxalsa.hpp"
-#include "headers/haxsdl.hpp"
+#include "headers/hax_alsa.hpp"
+#include "headers/hax_sdl.hpp"
+#include "headers/hax_threads.hpp"
 
 //Enum needed to choose the type of I/O loop
 typedef enum {
@@ -22,7 +20,7 @@ typedef struct{
 /********************* case: direct with r/w functions *************************/
 /*******************************************************************************/
 //This case only uses a main loop
-int direct_rw(snd_pcm_t *device, hax_device_conf_t cap_dev_params)
+int direct_rw(snd_pcm_t *device, hax_general_settings_t cap_dev_params)
 
 {
     int error;
@@ -60,7 +58,7 @@ int direct_rw(snd_pcm_t *device, hax_device_conf_t cap_dev_params)
 /********************** case: direct with memory mapping ***********************/
 /*******************************************************************************/
 //this case also uses one main loop
-int direct_mmap(snd_pcm_t *device, hax_device_conf_t cap_dev_params, SDL_Surface *surface)
+int direct_mmap(snd_pcm_t *device, hax_general_settings_t cap_dev_params)
 {
     int error, state;
     snd_pcm_sframes_t period_size = cap_dev_params.period_size;//period size in frames
@@ -69,6 +67,8 @@ int direct_mmap(snd_pcm_t *device, hax_device_conf_t cap_dev_params, SDL_Surface
     snd_pcm_uframes_t offset, frames, size;//aux for frames count
     snd_pcm_sframes_t avail, commitres;//aux for frames count
     int first=1; //first == 1  => first period of the stream is processed now
+
+    int16_t data[cap_dev_params.period_size];
 
     std::cout << "Inizio la cattura audio" << std::endl;
 
@@ -136,8 +136,6 @@ int direct_mmap(snd_pcm_t *device, hax_device_conf_t cap_dev_params, SDL_Surface
             }
             continue;
         }
-        size = period_size;
-        short data[size*n_channels];
         while (size > 0) //wait until we have period_size frames (in the most cases only one loop is needed)
         {
             frames = size;//expected frames number to be processed
@@ -151,8 +149,7 @@ int direct_mmap(snd_pcm_t *device, hax_device_conf_t cap_dev_params, SDL_Surface
                 first = 1;
             }
             //write to standard output
-            memcpy(data, (my_areas[0].addr)+(offset*sizeof(short)*n_channels), frames*sizeof(short)*n_channels);
-            draw_sound(surface, data, size, 0xff00ffff);
+            memcpy(data, (void *)((uintptr_t)(my_areas[0].addr)+(offset*sizeof(short)*n_channels)), frames*sizeof(short)*n_channels);
             commitres = snd_pcm_mmap_commit(device, offset, frames);
             if (commitres < 0 || (snd_pcm_uframes_t)commitres != frames) {
                 if ((error = xrun_recovery(device, commitres >= 0 ? commitres : -EPIPE)) < 0) {
@@ -223,7 +220,7 @@ int xrun_recovery(snd_pcm_t *handle, int error)
 }
 
 
-void hax_alsa_initialiser(int argc, char** argv, snd_pcm_t **device, hax_device_conf_t *hax_device)
+void hax_alsa_main(void * settings)
 {
 
     int error,dir;
@@ -232,9 +229,11 @@ void hax_alsa_initialiser(int argc, char** argv, snd_pcm_t **device, hax_device_
     //int n_channels = 2;//expected number of channels
     //unsigned int real_n_channels;//real number of channels
     //char * device_name = "front";
-    //snd_pcm_t *device;//capture device
+    snd_pcm_t *device;//capture device
     snd_pcm_hw_params_t *hw_params;//hardware configuration structure
-    int access = 1;
+    hax_thread_config_t * hax_configs = (hax_thread_config_t *) settings;
+    hax_general_settings_t * hax_user_settings = &hax_configs->user_settings;
+
     /*snd_pcm_sframes_t buffer_size = 2048;//expected buffer size in frames
     snd_pcm_uframes_t period_size = 8;//expected period size in frames
     snd_pcm_sframes_t real_buffer_size;//real buffer size in frames
@@ -250,66 +249,15 @@ void hax_alsa_initialiser(int argc, char** argv, snd_pcm_t **device, hax_device_
         { METHOD_DIRECT_MMAP, SND_PCM_ACCESS_MMAP_INTERLEAVED, 0 },
     };
 
-
-    struct option long_option[] =
-    {
-
-        {"device", 1, NULL, 'd'},
-        {"rate", 1, NULL, 'r'},
-        {"channels", 1, NULL, 'c'},
-        {"method", 1, NULL, 'm'},
-        {"buffer", 1, NULL, 'b'},
-        {"period", 1, NULL, 'p'},
-        {"help", 0, NULL, 'h'},
-        {NULL, 0, NULL, 0},
-    };//needed for getopt_long
-
- /************************** processing command line parameters ******************************/
-    while (1) {
-        int c;
-        if ((c = getopt_long(argc, argv, "d:r:c:m:b:p:h", long_option, NULL)) < 0)
-            break;
-        switch (c)
-        {
-            case 'd':
-                hax_device->device_name = strdup(optarg);
-                break;
-            case 'r':
-                hax_device->sample_rate = atoi(optarg);
-                hax_device->sample_rate = hax_device->sample_rate < 4000 ? 4000 : hax_device->sample_rate;
-                hax_device->sample_rate = hax_device->sample_rate > 196000 ? 196000 : hax_device->sample_rate;
-                break;
-            case 'c':
-                hax_device->n_channels = atoi(optarg);
-                hax_device->n_channels = hax_device->n_channels < 1 ? 1 : hax_device->n_channels;
-                hax_device->n_channels = hax_device->n_channels > 1024 ? 1024 : hax_device->n_channels;
-                break;
-            case 'm':
-                access = atoi(optarg);
-                break;
-            case 'b':
-                hax_device->buffer_size = atoi(optarg);
-                break;
-                        //  buffer_time(us) = 0.001 * buffer_size(frames) / rate(khz)
-            case 'p':
-                hax_device->period_size = atoi(optarg);
-                break;
-            case 'h':
-                help();
-                exit(1);
-                break;
-        }
-    }
-
 /************************************** opens the device *****************************************/
 
-    if ((error = snd_pcm_open (device, hax_device->device_name, SND_PCM_STREAM_CAPTURE, methods[access].open_mode)) < 0) {
+    if ((error = snd_pcm_open (&device, hax_user_settings->device_name, SND_PCM_STREAM_CAPTURE, methods[hax_user_settings->access].open_mode)) < 0) {
         fprintf (stderr, "microphone: Device cannot be opened  %s (%s)\n",
-             argv[1],
+             hax_user_settings->device_name,
              snd_strerror (error));
         exit (1);
     }
-    fprintf (stderr, "microphone: Device: %s open_mode = %d\n", hax_device->device_name, methods[access].open_mode);
+    fprintf (stderr, "microphone: Device: %s open_mode = %d\n", hax_user_settings->device_name, methods[hax_user_settings->access].open_mode);
 
     //allocating the hardware configuration structure
     if ((error = snd_pcm_hw_params_malloc (&hw_params)) < 0) {
@@ -319,15 +267,15 @@ void hax_alsa_initialiser(int argc, char** argv, snd_pcm_t **device, hax_device_
     }
 
     //assigning the hw configuration structure to the device0
-    if ((error = snd_pcm_hw_params_any (*device, hw_params)) < 0) {
-        fprintf (stderr, "microphone: Hardware configuration structure cannot be assigned to *device (%s)\n",
+    if ((error = snd_pcm_hw_params_any (device, hw_params)) < 0) {
+        fprintf (stderr, "microphone: Hardware configuration structure cannot be assigned to device (%s)\n",
              snd_strerror (error));
         exit (1);
     }
 
 /*********************************** shows the audio capture method ****************************/
 
-    switch(methods[access].method)
+    switch(methods[hax_user_settings->access].method)
     {
         case METHOD_DIRECT_RW:
             fprintf (stderr, "microphone: capture method: METHOD_DIRECT_RW (m = 0) \n");
@@ -339,20 +287,20 @@ void hax_alsa_initialiser(int argc, char** argv, snd_pcm_t **device, hax_device_
 
 /*************************** configures access method ******************************************/
     //sets the configuration method
-    fprintf (stderr, "microphone: Access method: %d\n",methods[access].access);
-    if ((error = snd_pcm_hw_params_set_access (*device, hw_params, methods[access].access)) < 0) {
+    fprintf (stderr, "microphone: hax_user_settings->access method: %d\n",methods[hax_user_settings->access].access);
+    if ((error = snd_pcm_hw_params_set_access (device, hw_params, methods[hax_user_settings->access].access)) < 0) {
         fprintf (stderr, "microphone: Access method cannot be configured (%s)\n",
              snd_strerror (error));
         exit (1);
     }
     //checks the access method
-    if ((error = snd_pcm_hw_params_get_access (hw_params, &hax_device->access_type)) < 0) {
+    if ((error = snd_pcm_hw_params_get_access (hw_params, &hax_user_settings->access_type)) < 0) {
         fprintf (stderr, "microphone: Access method cannot be obtained (%s)\n",
              snd_strerror (error));
         exit (1);
     }
     //shows the access method
-    switch(hax_device->access_type)
+    switch(hax_user_settings->access_type)
     {
       case SND_PCM_ACCESS_MMAP_INTERLEAVED:
           fprintf (stderr, "microphone: PCM access method: SND_PCM_ACCESS_MMAP_INTERLEAVED \n");
@@ -372,90 +320,90 @@ void hax_alsa_initialiser(int argc, char** argv, snd_pcm_t **device, hax_device_
     }
 /****************************  configures the capture format *******************************/
     //SND_PCM_FORMAT_S16_LE => 16 bit signed little endian
-    if ((error = snd_pcm_hw_params_set_format (*device, hw_params, SND_PCM_FORMAT_S16_LE)) < 0)
+    if ((error = snd_pcm_hw_params_set_format (device, hw_params, SND_PCM_FORMAT_S16_LE)) < 0)
     {
         fprintf (stderr, "microphone: Capture format cannot be configured (%s)\n",
              snd_strerror (error));
         exit (1);
     }
     //checks capture format
-    if ((error = snd_pcm_hw_params_get_format (hw_params, &hax_device->sample_format)) < 0)
+    if ((error = snd_pcm_hw_params_get_format (hw_params, &hax_user_settings->sample_format)) < 0)
     {
         fprintf (stderr, "microphone: Capture sample format cannot be obtained (%s)\n",
              snd_strerror (error));
         exit (1);
     }
     //just shows the capture format in a human readable way
-    switch(hax_device->sample_format)
+    switch(hax_user_settings->sample_format)
     {
     case SND_PCM_FORMAT_S16_LE:
         fprintf (stderr, "microphone: PCM capture sample format: SND_PCM_FORMAT_S16_LE \n");
         break;
     default:
-        fprintf (stderr, "microphone: PCM capture sample format = %d\n", hax_device->sample_format);
+        fprintf (stderr, "microphone: PCM capture sample format = %d\n", hax_user_settings->sample_format);
     }
 /*************************** configures the sample rate  ***************************/
 	//sets the sample rate
-    if ((error = snd_pcm_hw_params_set_rate (*device, hw_params, hax_device->sample_rate, 0)) < 0) {
+    if ((error = snd_pcm_hw_params_set_rate (device, hw_params, hax_user_settings->sample_rate, 0)) < 0) {
         fprintf (stderr, "microphone: Sample rate cannot be configured (%s)\n",
              snd_strerror (error));
         exit (1);
     }
     //checks sample rate
-    if ((error = snd_pcm_hw_params_get_rate (hw_params, &hax_device->sample_rate, 0)) < 0) {
+    if ((error = snd_pcm_hw_params_get_rate (hw_params, &hax_user_settings->sample_rate, 0)) < 0) {
         fprintf (stderr, "microphone: Sample rate cannot be obtained (%s)\n",
              snd_strerror (error));
         exit (1);
     }
-    fprintf (stderr, "microphone: Sample_rate_real = %d\n", hax_device->sample_rate);
+    fprintf (stderr, "microphone: Sample_rate_real = %d\n", hax_user_settings->sample_rate);
 
 /**************************** configures the number of channels ********************************/
     //sets the number of channels
-    if ((error = snd_pcm_hw_params_set_channels (*device, hw_params, hax_device->n_channels)) < 0) {
+    if ((error = snd_pcm_hw_params_set_channels (device, hw_params, hax_user_settings->n_channels)) < 0) {
         fprintf (stderr, "microphone: Number of channels cannot be configured (%s)\n",
              snd_strerror (error));
         exit (1);
     }
     //checks the number of channels
-    if ((error = snd_pcm_hw_params_get_channels (hw_params, &hax_device->n_channels)) < 0) {
+    if ((error = snd_pcm_hw_params_get_channels (hw_params, &hax_user_settings->n_channels)) < 0) {
         fprintf (stderr, "microphone: Number of channels cannot be obtained (%s)\n",
              snd_strerror (error));
         exit (1);
     }
-    fprintf (stderr, "microphone: real_n_channels = %d\n", hax_device->n_channels);
+    fprintf (stderr, "microphone: real_n_channels = %d\n", hax_user_settings->n_channels);
 
 /***************************** configures the buffer size *************************************/
     //sets the buffer size
-    if ((error = snd_pcm_hw_params_set_buffer_size(*device, hw_params, hax_device->buffer_size)) < 0) {
+    if ((error = snd_pcm_hw_params_set_buffer_size(device, hw_params, hax_user_settings->buffer_size)) < 0) {
         fprintf (stderr, "microphone: Buffer size cannot be configured (%s)\n",
              snd_strerror (error));
         exit (1);
     }
     //checks the value of the buffer size
-    if ((error = snd_pcm_hw_params_get_buffer_size(hw_params, &hax_device->buffer_size)) < 0) {
+    if ((error = snd_pcm_hw_params_get_buffer_size(hw_params, &hax_user_settings->buffer_size)) < 0) {
     fprintf (stderr, "microphone: Buffer size cannot be obtained (%s)\n",
              snd_strerror (error));
         exit (1);
     }
-    fprintf (stderr, "microphone: Buffer size = %d [frames]\n", (int)hax_device->buffer_size);
+    fprintf (stderr, "microphone: Buffer size = %d [frames]\n", (int)hax_user_settings->buffer_size);
 /***************************** configures period size *************************************/
     dir=0; //dir=0  =>  period size must be equal to period_size
     //sets the period size
-    if ((error = snd_pcm_hw_params_set_period_size(*device, hw_params, hax_device->period_size, dir)) < 0) {
+    if ((error = snd_pcm_hw_params_set_period_size(device, hw_params, hax_user_settings->period_size, dir)) < 0) {
         fprintf (stderr, "microphone: Period size cannot be configured (%s)\n",
              snd_strerror (error));
         exit (1);
     }
     //checks the value of period size
-    if ((error = snd_pcm_hw_params_get_period_size(hw_params, &hax_device->period_size, &dir)) < 0) {
+    if ((error = snd_pcm_hw_params_get_period_size(hw_params, &hax_user_settings->period_size, &dir)) < 0) {
     fprintf (stderr, "microphone: Period size cannot be obtained (%s)\n",
              snd_strerror (error));
         exit (1);
     }
-    fprintf (stderr, "microphone: Period size = %d [frames]\n", (int)hax_device->period_size);
+    fprintf (stderr, "microphone: Period size = %d [frames]\n", (int)hax_user_settings->period_size);
 /************************* applies the hardware configuration  ******************************/
 
-    if ((error = snd_pcm_hw_params (*device, hw_params)) < 0) {
+    if ((error = snd_pcm_hw_params (device, hw_params)) < 0) {
         fprintf (stderr, "microphone: Hardware parameters cannot be configured (%s)\n",
              snd_strerror (error));
         exit (1);
@@ -476,14 +424,14 @@ void hax_alsa_initialiser(int argc, char** argv, snd_pcm_t **device, hax_device_
 
 /********************** selects the appropriate access method for audio capture *******************/
 
-	/*switch(methods[access].method)
+	switch(methods[hax_user_settings->access].method)
 	{
 		case METHOD_DIRECT_RW:
-			direct_rw(device, *hax_device);
+			direct_rw(device, *hax_user_settings);
 		break;
 
 		case METHOD_DIRECT_MMAP:
-			direct_mmap(device, *hax_device);
+			direct_mmap(device, *hax_user_settings);
 		break;
 
 	}
@@ -491,5 +439,5 @@ void hax_alsa_initialiser(int argc, char** argv, snd_pcm_t **device, hax_device_
     fprintf (stderr, "microphone: BYE BYE\n");
     //closes the device
     snd_pcm_close (device);
-    exit (0);*/
+    exit (0);
 }
