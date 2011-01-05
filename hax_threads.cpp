@@ -4,8 +4,7 @@ hax_thread::hax_thread (void *(* routine)(void *), uint32_t period, uint64_t off
 
   thread_parameters.sched_priority = priority;
   thread_routine = routine;
-  settings.period = period;
-  settings.offset = offset;
+  settings.timer = new hax_rt_timer(period, offset);
   settings.data_zone = data;
   settings.user_settings = user_settings;
 }

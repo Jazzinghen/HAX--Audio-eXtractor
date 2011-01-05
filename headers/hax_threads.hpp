@@ -2,6 +2,7 @@
 #define HAX_THREADS_HPP_INCLUDED
 
 #include "hax_generic.hpp"
+#include "hax_rt_timer.h"
 
 typedef struct {
   struct timespec r;
@@ -10,8 +11,7 @@ typedef struct {
 
 typedef struct {
 
-  uint32_t period;
-  uint64_t offset;
+  hax_rt_timer * timer;
   void * data_zone;
   hax_general_settings_t user_settings;
 

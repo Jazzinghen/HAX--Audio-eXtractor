@@ -12,15 +12,10 @@
 #include "headers/hax_sdl_data.h"
 #include "headers/hax_fftw.h"
 #include "headers/hax_threads.hpp"
-#include "headers/hax_generic.hpp"
+#include "headers/hax_fftw_cross_data.h"
 
 #define FRAMES 64
 #define START_TIEM 2000000
-
-typedef struct {
-    hax_sdl_data * sdl;
-    hax_fftw_data * fftw;
-} hax_fftw_cross_data_t;
 
 int main ( int argc, char** argv )
 {
@@ -77,15 +72,17 @@ int main ( int argc, char** argv )
       }
   };
 
-  hax_fftw_data * fftw_data = new hax_fftw_data(hax_settings.period_size);
+  hax_fftw_data * alsa_data = new hax_fftw_data(hax_settings.period_size);
   hax_sdl_data * sdl_data = new hax_sdl_data(hax_settings.period_size);
-  hax_fftw_cross_data_t hax_fftw_cross_data = {sdl_data, fftw_data};
+  hax_fftw_cross_data_t hax_fftw_data = {sdl_data, alsa_data};
 
   hax_thread * sdl_thread = new hax_thread(hax_sdl_main, START_TIEM, 16666666, 1, (void *) sdl_data, hax_settings);
-  hax_thread * fftw_thread = new hax_thread(hax_fftw_main, START_TIEM, 100000, 2, (void *) &hax_fftw_cross_data, hax_settings);
+  hax_thread * fftw_thread = new hax_thread(hax_fftw_main, START_TIEM, 100000, 2, (void *) &hax_fftw_data, hax_settings);
+  hax_thread * alsa_thread = new hax_thread(hax_alsa_main, START_TIEM, 99999, 3, (void *) alsa_data, hax_settings);
 
   sdl_thread->start();
   fftw_thread->start();
+  alsa_thread->start();
 
   return 0;
 }

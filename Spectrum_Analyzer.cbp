@@ -39,10 +39,20 @@
 		<Unit filename="cb.bmp">
 			<Option target="&lt;{~None~}&gt;" />
 		</Unit>
+		<Unit filename="hax_alsa.cpp" />
+		<Unit filename="hax_fftw.cpp" />
 		<Unit filename="hax_fftw_data.cpp" />
+		<Unit filename="hax_rt_timer.cpp" />
+		<Unit filename="hax_sdl.cpp" />
 		<Unit filename="hax_sdl_data.cpp" />
 		<Unit filename="hax_threads.cpp" />
+		<Unit filename="headers/hax_alsa.hpp" />
+		<Unit filename="headers/hax_fftw.h" />
+		<Unit filename="headers/hax_fftw_cross_data.h" />
 		<Unit filename="headers/hax_fftw_data.h" />
+		<Unit filename="headers/hax_generic.hpp" />
+		<Unit filename="headers/hax_rt_timer.h" />
+		<Unit filename="headers/hax_sdl.hpp" />
 		<Unit filename="headers/hax_sdl_data.h" />
 		<Unit filename="headers/hax_threads.hpp" />
 		<Unit filename="main.cpp" />

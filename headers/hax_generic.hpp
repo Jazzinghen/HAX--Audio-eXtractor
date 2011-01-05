@@ -34,11 +34,12 @@ typedef struct {
     snd_pcm_uframes_t period_size;      //period size in frames
     unsigned int buffer_time;           //length of the circular buffer in usec
     unsigned int period_time;           //length of one period in usec
-    unsigned int n_channels;                     //number of channels
+    unsigned int n_channels;            //number of channels
     unsigned int sample_rate;           //frame rate
     snd_pcm_format_t sample_format;     //format of the samples
     snd_pcm_access_t access_type;       //PCM access type
-    int access;
+    int access;                         //Raw Access Mode
 } hax_general_settings_t;
+
 
 #endif // HAXGENERIC_HPP_INCLUDED

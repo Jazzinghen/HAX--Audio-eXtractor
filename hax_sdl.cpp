@@ -1,6 +1,6 @@
 #include "headers/hax_sdl.hpp"
+#include "headers/hax_threads.hpp"
 #include <cmath>
-#include <iostream>
 
 #define PI 3.14159265
 #define DAMP_FACTOR 9001
@@ -111,6 +111,10 @@ void draw_circle(SDL_Surface *surface, int cx, int cy, int radius, Uint32 pixel)
 
 void * hax_sdl_main(void *configuration){
 
+    hax_thread_config_t * hax_configs = (hax_thread_config_t *) configuration;
+    hax_general_settings_t * hax_user_settings = &hax_configs->user_settings;
+
+
     FPSmanager hax_fps;
     float displ = 0;
 
@@ -145,6 +149,8 @@ void * hax_sdl_main(void *configuration){
     bool done = false;
     while (!done)
     {
+        hax_configs->timer->wait_next_activation();
+
         // message processing loop
         SDL_Event event;
         while (SDL_PollEvent(&event))
