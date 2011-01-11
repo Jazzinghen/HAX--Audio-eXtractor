@@ -39,9 +39,11 @@ void hax_sdl_data::set_spectrums(fftw_complex * left_channel, fftw_complex * rig
 }
 
 int hax_sdl_data::lock_data(){
+  printf("[SDL LOCK]Locking...\n");
   return pthread_mutex_lock(&protection_mutex);
 }
 
 int hax_sdl_data::unlock_data(){
+  printf("[SDL LOCK]Unlocking...\n");
   return pthread_mutex_unlock(&protection_mutex);
 }

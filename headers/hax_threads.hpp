@@ -26,6 +26,8 @@ class hax_thread {
     struct sched_param thread_parameters;
     pthread_t thread_handler;
 
+
+
   public:
 
     hax_thread (void *(* routine)(void *), uint32_t period, uint64_t offset, int priority, void * data, hax_general_settings_t settings);

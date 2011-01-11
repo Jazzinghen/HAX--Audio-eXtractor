@@ -1,5 +1,6 @@
 #include "headers/hax_sdl.hpp"
 #include "headers/hax_threads.hpp"
+#include "headers/hax_sdl_data.h"
 #include <cmath>
 
 #define PI 3.14159265
@@ -36,26 +37,22 @@ void sine_graph(SDL_Surface *surface, float freq, float amplitude, float displ, 
     // std::cout << freq << " " << ((i - (surface->w / 2)) * PI * freq) << std::endl;
     aalineColor(surface, i-1, oldy + (surface->h / 2), i,  y + (surface->h / 2), pixel);
   }
+
+  //aalineColor(surface, surface->w / 2, surface->h / 2, surface->w / 2 + amplitude * -cos (displ * PI * freq), surface->h / 2 + amplitude * sin (displ * PI * freq), pixel);
 }
 
 void draw_sound(SDL_Surface *surface, int size, int16_t * left_channel, int16_t * right_channel, Uint32 pixel) {
   int i;
 
-  short right[size];
-  short left[size];
-
-  for (i=0; i < size; i++){
-    scanf("%hi ", &left[i]);
-  }
-  for (i=0; i < size; i++){
-    scanf("%hi ", &right[i]);
-  }
-  scanf("\n");
+  printf("[SDL] Data from L/R channel (SDL Class), frames 24 and 38. L: {%i, %i} R: {%i, %i}\n",
+             left_channel[24], left_channel[38],
+             right_channel[24], right_channel[38]);
 
   for (i=1; i<size; i++){
-    aalineColor(surface, (surface->w / 2) + ((i-1)*10), ((right[i-1] * (surface->h / 2) / DAMP_FACTOR) + (surface->h / 2)), (surface->w / 2) + (i*10), ((right[i] * (surface->h / 2) / DAMP_FACTOR) + (surface->h / 2)), pixel);
-    aalineColor(surface, (surface->w / 2) - ((i-1)*10), ((left[i-1] * (surface->h / 2) / DAMP_FACTOR) + (surface->h / 2)), (surface->w / 2) - (i*10), ((left[i]  * (surface->h / 2) / DAMP_FACTOR) + (surface->h / 2)), pixel);
+    aalineColor(surface, (surface->w / 2) + ((i-1)*10), ((right_channel[i-1] * (surface->h / 2) / DAMP_FACTOR) + (surface->h / 2)), (surface->w / 2) + (i*10), ((right_channel[i] * (surface->h / 2) / DAMP_FACTOR) + (surface->h / 2)), pixel);
+    aalineColor(surface, (surface->w / 2) - ((i-1)*10), ((left_channel[i-1] * (surface->h / 2) / DAMP_FACTOR) + (surface->h / 2)), (surface->w / 2) - (i*10), ((left_channel[i]  * (surface->h / 2) / DAMP_FACTOR) + (surface->h / 2)), pixel);
   }
+
 }
 
 /*
@@ -113,7 +110,9 @@ void * hax_sdl_main(void *configuration){
 
     hax_thread_config_t * hax_configs = (hax_thread_config_t *) configuration;
     hax_general_settings_t * hax_user_settings = &hax_configs->user_settings;
+    hax_sdl_data * hax_sound_data = (hax_sdl_data *) hax_configs->data_zone;
 
+    printf("[SDL] Thread Start!\n");
 
     FPSmanager hax_fps;
     float displ = 0;
@@ -142,11 +141,21 @@ void * hax_sdl_main(void *configuration){
         pthread_exit((void *) 1);
     }
 
-    std::cout << screen->w/2 << std::endl;
-    std::cout << screen->h/2 << std::endl;
+    std::cout << "[SDL] " << screen->w/2 << std::endl;
+    std::cout << "[SDL] " << screen->h/2 << std::endl;
 
     // program main loop
     bool done = false;
+
+    printf("[SDL] Waiting to start...\n");
+    fflush(stdout);
+    std::cout.flush();
+
+    hax_configs->timer->start();
+
+    printf("[SDL] Firing Loop!\n");
+    fflush(stdout);
+    std::cout.flush();
     while (!done)
     {
         hax_configs->timer->wait_next_activation();
@@ -185,7 +194,21 @@ void * hax_sdl_main(void *configuration){
         vlineColor(screen, screen->w / 2, 0, screen->h, 0xffffffff);
         hlineColor(screen, 0, screen->w, screen->h / 2, 0xffffffff);
 
-        sine_graph(screen, 0.01, 60, displ, 0xff00ffff);
+        //sine_graph(screen, 0.01, 60, displ, 0xff00ffff);
+
+
+        printf("[SDL] Requiring Locks!\n");
+        fflush(stdout);
+        std::cout.flush();
+        hax_sound_data->lock_data();
+          printf("[SDL] Plotting Sound Data!\n");
+          fflush(stdout);
+          std::cout.flush();
+          draw_sound(screen, hax_sound_data->get_frames(), hax_sound_data->get_left_sound_channel(), hax_sound_data->get_right_sound_channel(), 0xff00ffff);
+          printf("[SDL] Releasing Locks!\n");
+          fflush(stdout);
+          std::cout.flush();
+        hax_sound_data->unlock_data();
 
         // Draw circle
         draw_circle(screen, (screen->w / 2), (screen->h / 2), 60, 0xffffffff);

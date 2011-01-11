@@ -11,7 +11,6 @@ void sine_graph(SDL_Surface *surface, float freq, float amplitude, float displ, 
 
 void draw_circle(SDL_Surface *surface, int cx, int cy, int radius, Uint32 pixel);
 
-void draw_sound(SDL_Surface *surface, int size, Uint32 pixel);
-
+void draw_sound(SDL_Surface *surface, int size, int16_t * left_channel, int16_t * right_channel, Uint32 pixel);
 
 #endif // HAXSDL_HPP_INCLUDED

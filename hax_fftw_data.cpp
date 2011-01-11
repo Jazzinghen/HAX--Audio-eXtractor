@@ -40,9 +40,11 @@ int16_t * hax_fftw_data::get_right_channel(){
 }
 
 int hax_fftw_data::lock_data(){
+  printf("[FFTW LOCK]Locking...\n");
   return pthread_mutex_lock(&protection_mutex);
 }
 
 int hax_fftw_data::unlock_data(){
+  printf("[FFTW LOCK]Unlocking...\n");
   return pthread_mutex_unlock(&protection_mutex);
 }

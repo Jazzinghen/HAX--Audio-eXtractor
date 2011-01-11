@@ -57,10 +57,148 @@ int direct_rw(snd_pcm_t *device, hax_general_settings_t cap_dev_params)
 }
 
 
+int direct_mmap(snd_pcm_t *device, hax_general_settings_t cap_dev_params, hax_fftw_data * shared_data, hax_rt_timer * rt_timer)
+{
+    int error, state;
+    int i;
+    int circular_point = 0;
+    snd_pcm_sframes_t period_size = cap_dev_params.period_size;//period size in frames
+    int n_channels = cap_dev_params.n_channels;//number of channels
+    const snd_pcm_channel_area_t *my_areas;//mapped memory area info
+    snd_pcm_uframes_t offset, frames, size;//aux for frames count
+    snd_pcm_sframes_t avail, commitres;//aux for frames count
+    int first=1; //first == 1  => first period of the stream is processed now
+    short *data;
+    float *right, *left;
+    float circular_left[5][64];
+    float circular_right[5][64];
+
+    while(1) //main loop
+    {
+        state = snd_pcm_state(device); //needed for descriptor check
+        switch(state)
+        {
+            case SND_PCM_STATE_XRUN://buffer over-run
+                //fprintf(stderr,"microphone: SND_PCM_STATE_XRUN\n");
+                if (error = xrun_recovery(device, -EPIPE) < 0)
+                {
+                    fprintf(stderr,"microphone: XRUN recovery failed: %s\n", snd_strerror(error));
+                    return error;
+                }
+				//stream is restarted
+                first = 1;
+                break;
+
+            case SND_PCM_STATE_SUSPENDED://PCM is suspended
+            //fprintf(stderr,"microphone: SND_PCM_STATE_SUSPENDED\n");
+                if (error = xrun_recovery(device, -ESTRPIPE) < 0)
+                {
+                    fprintf(stderr,"microphone: SUSPEND recovery failed: %s\n", snd_strerror(error));
+                    return error;
+                }
+                break;
+        }
+
+		//checks how many frames are ready to read or write
+        avail = snd_pcm_avail_update(device);
+        if (avail < 0)
+        {
+            if (error = xrun_recovery(device, avail) < 0) {
+                fprintf(stderr,"microphone: SUSPEND recovery failed: %s\n", snd_strerror(error));
+                return error;
+            }
+            first = 1;
+            continue;
+        }
+        if (avail < period_size)//checks if one period is ready to process
+        {
+            switch(first)
+            {
+                case 1:
+					//if the capture from PCM is started (first=1) and one period is ready to process,
+					//the stream must start
+                    first = 0;
+                    if (error = snd_pcm_start(device) < 0) {
+                        fprintf(stderr,"microphone: Start error: %s\n", snd_strerror(error));
+                        exit(EXIT_FAILURE);
+                    }
+                    break;
+
+                case 0:
+                    //wait for pcm to become ready
+                    if (error = snd_pcm_wait(device, -1)< 0) {
+                        if ((error = xrun_recovery(device, error)) < 0) {
+                            fprintf(stderr,"microphone: snd_pcm_wait error: %s\n", snd_strerror(error));
+                            exit(EXIT_FAILURE);
+                        }
+                        first = 1;
+                    }
+            }
+            continue;
+        }
+        size = period_size;
+        data = (short *)calloc(period_size * n_channels, sizeof(short));
+        right = (float *)calloc(period_size, sizeof(float));
+        left = (float *)calloc (period_size, sizeof(float));
+        while (size > 0) //wait until we have period_size frames (in the most cases only one loop is needed)
+        {
+            frames = size;//expected frames number to be processed
+			//frames is a bidirectional variable, this means that the real number of frames processed is written
+			//to this variable by the function.
+            if ((error = snd_pcm_mmap_begin (device, &my_areas, &offset, &frames)) < 0) {
+                if ((error = xrun_recovery(device, error)) < 0) {
+                    fprintf(stderr,"microphone: MMAP begin avail error: %s\n", snd_strerror(error));
+                    exit(EXIT_FAILURE);
+                }
+                first = 1;
+            }
+            //write to standard output
+            memcpy(data, (void *)((uintptr_t)(my_areas[0].addr)+(offset*sizeof(short)*n_channels)), frames*sizeof(short)*n_channels);
+            for (i = 0; i<frames; i++){
+              circular_right[circular_point][i] = data[i*2];
+              circular_left[circular_point][frames - i] = data[(i+1)*2];
+            }
+            for (i = 0; i<frames; i++) {
+              right[i]+=circular_right[circular_point][i]/(float)5;
+              left[i]+=circular_left[circular_point][i]/(float)5;
+            }
+            if (circular_point >= (5-1)) {
+              for (i=0; i < frames; i++){
+                printf("%hi ", (short)right[i]);
+              }
+              for (i=0; i < frames; i++){
+                printf("%hi ", (short)left[i]);
+              }
+              for (i=0; i < frames; i++){
+                right[i] = 0;
+                left[i] = 0;
+              }
+              circular_point = 0;
+            } else {
+              circular_point ++;
+            }
+            printf("\n");
+            commitres = snd_pcm_mmap_commit(device, offset, frames);
+            if (commitres < 0 || (snd_pcm_uframes_t)commitres != frames) {
+                if ((error = xrun_recovery(device, commitres >= 0 ? commitres : -EPIPE)) < 0) {
+                    fprintf(stderr,"microphone: MMAP commit error: %s\n", snd_strerror(error));
+                    exit(EXIT_FAILURE);
+                }
+                first = 1;
+            }
+            size -= frames;//needed in the condition of the while loop to check if period is filled
+        }
+        free(data);
+        free(right);
+        free(left);
+    }
+}
+
 /*******************************************************************************/
 /********************** case: direct with memory mapping ***********************/
 /*******************************************************************************/
 //this case also uses one main loop
+/*
 int direct_mmap(snd_pcm_t *device, hax_general_settings_t cap_dev_params, hax_fftw_data * shared_data, hax_rt_timer * rt_timer)
 {
     int error, state;
@@ -78,13 +216,16 @@ int direct_mmap(snd_pcm_t *device, hax_general_settings_t cap_dev_params, hax_ff
     int16_t average[cap_dev_params.period_size*n_channels];
     int16_t circular_data[CIRCULAR_SAMPLES][cap_dev_params.period_size*n_channels];
 
-    std::cout << "Inizio la cattura audio" << std::endl;
+
+    rt_timer->start();
+
+    printf("[ALSA] Audio Capture started.\n");
+
 
     while(1) //main loop
     {
       rt_timer->wait_next_activation();
       state = snd_pcm_state(device); //needed for descriptor check
-      std::cout << "WAT" << std::endl;
       switch(state)
       {
           case SND_PCM_STATE_XRUN://buffer over-run
@@ -111,6 +252,8 @@ int direct_mmap(snd_pcm_t *device, hax_general_settings_t cap_dev_params, hax_ff
   //checks how many frames are ready to read or write
       std::cout << "Update available blocks" << std::endl;
       avail = snd_pcm_avail_update(device);
+      printf("[ALSA] There is %i data available.\n", (int)avail);
+
       while (avail < 0)
       {
           if ((error = xrun_recovery(device, avail)) < 0) {
@@ -161,6 +304,10 @@ int direct_mmap(snd_pcm_t *device, hax_general_settings_t cap_dev_params, hax_ff
 
           memcpy(circular_data[circular_step], (void *)((uintptr_t)(my_areas[0].addr)+(offset*sizeof(short)*n_channels)), frames*sizeof(short)*n_channels);
 
+          printf("[ALSA] Data from L/R channel (SDL Class), frames 24 and 38. L: {%i, %i} R: {%i, %i}\n",
+           circular_data[circular_step][48], circular_data[circular_step][76],
+           circular_data[circular_step][49], circular_data[circular_step][77]);
+
           memset(average, 0, sizeof(int16_t) * frames*sizeof(short)*n_channels);
 
           for (j = 0; j < CIRCULAR_SAMPLES; j++){
@@ -169,8 +316,11 @@ int direct_mmap(snd_pcm_t *device, hax_general_settings_t cap_dev_params, hax_ff
             }
           }
 
+          printf("[ALSA] Locking Data.\n");
           shared_data->lock_data();
-          shared_data->populate_channels(average);
+            printf("[ALSA] Populating Channels.\n");
+            shared_data->populate_channels(average);
+            printf("[ALSA] Releasing Locks.\n");
           shared_data->unlock_data();
 
           commitres = snd_pcm_mmap_commit(device, offset, frames);
@@ -187,6 +337,8 @@ int direct_mmap(snd_pcm_t *device, hax_general_settings_t cap_dev_params, hax_ff
 
     return 0;
 }
+
+*/
 
 void help(void)
 {
@@ -272,6 +424,8 @@ void * hax_alsa_main(void * settings)
         { METHOD_DIRECT_MMAP, SND_PCM_ACCESS_MMAP_INTERLEAVED, 0 },
     };
 
+
+    printf("[ALSA] Thread Started, Initialising Capture device.\n");
 /************************************** opens the device *****************************************/
 
     if ((error = snd_pcm_open (&device, hax_user_settings->device_name, SND_PCM_STREAM_CAPTURE, methods[hax_user_settings->access].open_mode)) < 0) {

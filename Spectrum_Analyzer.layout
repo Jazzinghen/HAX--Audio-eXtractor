@@ -4,8 +4,8 @@
 	<File name="hax_alsa.cpp" open="1" top="0" tabpos="10">
 		<Cursor position="6584" topLine="61" />
 	</File>
-	<File name="hax_fftw.cpp" open="1" top="1" tabpos="15">
-		<Cursor position="587" topLine="0" />
+	<File name="hax_fftw.cpp" open="1" top="1" tabpos="14">
+		<Cursor position="1128" topLine="0" />
 	</File>
 	<File name="hax_fftw_data.cpp" open="1" top="0" tabpos="11">
 		<Cursor position="256" topLine="8" />
@@ -13,7 +13,7 @@
 	<File name="hax_sdl.cpp" open="1" top="0" tabpos="5">
 		<Cursor position="3161" topLine="109" />
 	</File>
-	<File name="hax_sdl_data.cpp" open="1" top="0" tabpos="16">
+	<File name="hax_sdl_data.cpp" open="1" top="0" tabpos="15">
 		<Cursor position="183" topLine="0" />
 	</File>
 	<File name="hax_threads.cpp" open="1" top="0" tabpos="2">
@@ -22,7 +22,7 @@
 	<File name="headers/hax_alsa.hpp" open="1" top="0" tabpos="8">
 		<Cursor position="377" topLine="0" />
 	</File>
-	<File name="headers/hax_fftw.h" open="1" top="0" tabpos="14">
+	<File name="headers/hax_fftw.h" open="1" top="0" tabpos="13">
 		<Cursor position="86" topLine="0" />
 	</File>
 	<File name="headers/hax_fftw_data.h" open="1" top="0" tabpos="7">

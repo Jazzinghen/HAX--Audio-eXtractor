@@ -13,6 +13,7 @@ class hax_rt_timer
     hax_rt_timer(uint32_t timer_period, uint64_t timer_offset);
     ~hax_rt_timer();
     void wait_next_activation();
+    void start();
 
   protected:
   private:
