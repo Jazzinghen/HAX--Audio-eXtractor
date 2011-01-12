@@ -13,6 +13,7 @@
 				<Option compiler="gcc" />
 				<Compiler>
 					<Add option="-Wall" />
+					<Add option="-g" />
 				</Compiler>
 				<Linker>
 					<Add option="-lSDL_gfx" />
@@ -36,9 +37,6 @@
 		<Linker>
 			<Add option="`sdl-config --libs` -lSDL_gfx -lasound -lfftw3 -lm" />
 		</Linker>
-		<Unit filename="cb.bmp">
-			<Option target="&lt;{~None~}&gt;" />
-		</Unit>
 		<Unit filename="hax_alsa.cpp" />
 		<Unit filename="hax_fftw.cpp" />
 		<Unit filename="hax_fftw_data.cpp" />

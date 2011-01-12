@@ -4,7 +4,7 @@
 #include <cmath>
 
 #define PI 3.14159265
-#define DAMP_FACTOR 9001
+#define DAMP_FACTOR  32767
 
 #define SCREENW 854
 #define SCREENH 480
@@ -43,14 +43,30 @@ void sine_graph(SDL_Surface *surface, float freq, float amplitude, float displ, 
 
 void draw_sound(SDL_Surface *surface, int size, int16_t * left_channel, int16_t * right_channel, Uint32 pixel) {
   int i;
+  int step;
+
+  step = (int)(((float)surface->w / 2) / size);
 
   printf("[SDL] Data from L/R channel (SDL Class), frames 24 and 38. L: {%i, %i} R: {%i, %i}\n",
              left_channel[24], left_channel[38],
              right_channel[24], right_channel[38]);
 
   for (i=1; i<size; i++){
-    aalineColor(surface, (surface->w / 2) + ((i-1)*10), ((right_channel[i-1] * (surface->h / 2) / DAMP_FACTOR) + (surface->h / 2)), (surface->w / 2) + (i*10), ((right_channel[i] * (surface->h / 2) / DAMP_FACTOR) + (surface->h / 2)), pixel);
-    aalineColor(surface, (surface->w / 2) - ((i-1)*10), ((left_channel[i-1] * (surface->h / 2) / DAMP_FACTOR) + (surface->h / 2)), (surface->w / 2) - (i*10), ((left_channel[i]  * (surface->h / 2) / DAMP_FACTOR) + (surface->h / 2)), pixel);
+    aalineColor(surface, (surface->w / 2) + ((i-1)*step), ((int)(right_channel[i-1] * (surface->h / 4) / (float)DAMP_FACTOR) + (surface->h / 4)), (surface->w / 2) + (i*step), ((int)(right_channel[i] * (surface->h / 4) / (float)DAMP_FACTOR) + (surface->h / 4)), pixel);
+    aalineColor(surface, (surface->w / 2) - ((i-1)*step), ((int)(left_channel[i-1] * (surface->h / 4) / (float)DAMP_FACTOR) + (surface->h / 4)), (surface->w / 2) - (i*step), ((int)(left_channel[i]  * (surface->h / 4) / (float)DAMP_FACTOR) + (surface->h / 4)), pixel);
+  }
+
+}
+
+void draw_spectrum(SDL_Surface *surface, int size, fftw_complex * left_channel, fftw_complex * right_channel, Uint32 pixel) {
+  int i;
+  int step;
+
+  step = (int)(((float)surface->w / 2) / (size));
+
+  for (i=1; i < size; i++){
+    aalineColor(surface, (surface->w / 2) + ((i-1)*step), ((int)((right_channel[1][i-1] * (surface->h / 4))) + (3 * surface->h / 4)), (surface->w / 2) + (i*step), ((int)((right_channel[1][i] * (surface->h / 4)) + (3 * surface->h / 4))), pixel);
+    aalineColor(surface, (surface->w / 2) - ((i-1)*step), ((int)((right_channel[1][i-1] * (surface->h / 4))) + (3 * surface->h / 4)), (surface->w / 2) - (i*step), ((int)((right_channel[1][i] * (surface->h / 4)) + (3 * surface->h / 4))), pixel);
   }
 
 }
@@ -135,9 +151,10 @@ void * hax_sdl_main(void *configuration){
     // create a new window
     SDL_Surface* screen = SDL_SetVideoMode(SCREENW, SCREENH, 32,
                                            SDL_HWSURFACE|SDL_DOUBLEBUF);
+
     if ( !screen )
     {
-        printf("Unable to set 640x480 video: %s\n", SDL_GetError());
+        printf("Unable to set %i x %i video: %s\n", SCREENW, SCREENH, SDL_GetError());
         pthread_exit((void *) 1);
     }
 
@@ -192,7 +209,9 @@ void * hax_sdl_main(void *configuration){
         // SDL_BlitSurface(bmp, 0, screen, &dstrect);
 
         vlineColor(screen, screen->w / 2, 0, screen->h, 0xffffffff);
-        hlineColor(screen, 0, screen->w, screen->h / 2, 0xffffffff);
+        hlineColor(screen, 0, screen->w, screen->h / 4, 0xffffffff);
+
+        hlineColor(screen, 0, screen->w, 3 * screen->h / 4, 0xffffffff);
 
         //sine_graph(screen, 0.01, 60, displ, 0xff00ffff);
 
@@ -205,6 +224,7 @@ void * hax_sdl_main(void *configuration){
           fflush(stdout);
           std::cout.flush();
           draw_sound(screen, hax_sound_data->get_frames(), hax_sound_data->get_left_sound_channel(), hax_sound_data->get_right_sound_channel(), 0xff00ffff);
+          draw_spectrum(screen, (hax_sound_data->get_frames() / 2) + 1, hax_sound_data->get_left_spectrum(), hax_sound_data->get_right_spectrum(), 0x00ffffff );
           printf("[SDL] Releasing Locks!\n");
           fflush(stdout);
           std::cout.flush();
@@ -219,6 +239,7 @@ void * hax_sdl_main(void *configuration){
 
         // finally, update the screen :)
         SDL_Flip(screen);
+
 
         displ ++;
     } // end main loop

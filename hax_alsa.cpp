@@ -4,7 +4,7 @@
 #include "headers/hax_threads.hpp"
 #include "headers/hax_fftw_data.h"
 
-#define CIRCULAR_SAMPLES 5
+#define CIRCULAR_SAMPLES 20
 
 //Enum needed to choose the type of I/O loop
 typedef enum {
@@ -60,7 +60,7 @@ int direct_rw(snd_pcm_t *device, hax_general_settings_t cap_dev_params)
 int direct_mmap(snd_pcm_t *device, hax_general_settings_t cap_dev_params, hax_fftw_data * shared_data, hax_rt_timer * rt_timer)
 {
     int error, state;
-    int i;
+    uint32_t i;
     int circular_point = 0;
     snd_pcm_sframes_t period_size = cap_dev_params.period_size;//period size in frames
     int n_channels = cap_dev_params.n_channels;//number of channels
@@ -68,13 +68,19 @@ int direct_mmap(snd_pcm_t *device, hax_general_settings_t cap_dev_params, hax_ff
     snd_pcm_uframes_t offset, frames, size;//aux for frames count
     snd_pcm_sframes_t avail, commitres;//aux for frames count
     int first=1; //first == 1  => first period of the stream is processed now
-    short *data;
-    float *right, *left;
-    float circular_left[5][64];
-    float circular_right[5][64];
+    snd_pcm_sframes_t total_frames = cap_dev_params.period_size * n_channels;
+    int16_t data[total_frames];
+    float average[total_frames];
+    int16_t circular_data[CIRCULAR_SAMPLES][total_frames];
+
+    //data = (int16_t *)calloc(period_size * n_channels, sizeof(int16_t));
+    memset(average, 0, sizeof(float) * total_frames);
+
+    rt_timer->start();
 
     while(1) //main loop
     {
+        rt_timer->wait_next_activation();
         state = snd_pcm_state(device); //needed for descriptor check
         switch(state)
         {
@@ -137,9 +143,6 @@ int direct_mmap(snd_pcm_t *device, hax_general_settings_t cap_dev_params, hax_ff
             continue;
         }
         size = period_size;
-        data = (short *)calloc(period_size * n_channels, sizeof(short));
-        right = (float *)calloc(period_size, sizeof(float));
-        left = (float *)calloc (period_size, sizeof(float));
         while (size > 0) //wait until we have period_size frames (in the most cases only one loop is needed)
         {
             frames = size;//expected frames number to be processed
@@ -152,28 +155,29 @@ int direct_mmap(snd_pcm_t *device, hax_general_settings_t cap_dev_params, hax_ff
                 }
                 first = 1;
             }
+
             //write to standard output
-            memcpy(data, (void *)((uintptr_t)(my_areas[0].addr)+(offset*sizeof(short)*n_channels)), frames*sizeof(short)*n_channels);
-            for (i = 0; i<frames; i++){
-              circular_right[circular_point][i] = data[i*2];
-              circular_left[circular_point][frames - i] = data[(i+1)*2];
+            memcpy(circular_data[circular_point], (void *)((uintptr_t)(my_areas[0].addr)+(offset*sizeof(int16_t)*n_channels)), sizeof(int16_t)*total_frames);
+
+            printf("[ALSA] Data from L/R channel (SDL Class), frames 24 and 38. L: {%i, %i} R: {%i, %i}\n",
+                    circular_data[circular_point][48], circular_data[circular_point][76],
+                    circular_data[circular_point][49], circular_data[circular_point][77]);
+
+            for (i = 0; i < total_frames; i++) {
+              average[i] += circular_data[circular_point][i]/(float)CIRCULAR_SAMPLES;
             }
-            for (i = 0; i<frames; i++) {
-              right[i]+=circular_right[circular_point][i]/(float)5;
-              left[i]+=circular_left[circular_point][i]/(float)5;
-            }
-            if (circular_point >= (5-1)) {
-              for (i=0; i < frames; i++){
-                printf("%hi ", (short)right[i]);
+            if (circular_point >= (CIRCULAR_SAMPLES - 1)) {
+              for (i = 0; i < total_frames; i++){
+                data[i] = (int16_t) average[i];
               }
-              for (i=0; i < frames; i++){
-                printf("%hi ", (short)left[i]);
-              }
-              for (i=0; i < frames; i++){
-                right[i] = 0;
-                left[i] = 0;
-              }
+              printf("[ALSA] Locking Data.\n");
+              shared_data->lock_data();
+                printf("[ALSA] Populating Channels.\n");
+                shared_data->populate_channels(data);
+                printf("[ALSA] Releasing Locks.\n");
+              shared_data->unlock_data();
               circular_point = 0;
+              memset(average, 0, sizeof(float) * total_frames);
             } else {
               circular_point ++;
             }
@@ -188,10 +192,10 @@ int direct_mmap(snd_pcm_t *device, hax_general_settings_t cap_dev_params, hax_ff
             }
             size -= frames;//needed in the condition of the while loop to check if period is filled
         }
-        free(data);
-        free(right);
-        free(left);
+
     }
+    //free(data);
+    return 0;
 }
 
 /*******************************************************************************/
@@ -364,7 +368,7 @@ int xrun_recovery(snd_pcm_t *handle, int error)
     {
         case -EPIPE:    // Buffer Over-run
             fprintf(stderr,"microphone: \"Buffer Overrun\" \n");
-            if ((error = snd_pcm_prepare(handle)) < 0)
+            if ((error = snd_pcm_recover(handle, error, 1)) < 0)
                 fprintf(stderr,"microphone: Buffer overrrun cannot be recovered, snd_pcm_prepare fail: %s\n", snd_strerror(error));
             return 0;
             break;
