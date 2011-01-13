@@ -1,4 +1,5 @@
 #include "headers/hax_threads.hpp"
+#include "headers/hax_generic.hpp"
 
 hax_thread::hax_thread (void *(* routine)(void *), uint32_t period, uint64_t offset, int priority, void * data, hax_general_settings_t user_settings){
 
@@ -21,8 +22,11 @@ int hax_thread::start(){
   err = pthread_attr_init(&thread_attributes);
 
   err = pthread_attr_setschedpolicy(&thread_attributes, SCHED_FIFO);
+  assert(err == 0);
   err = pthread_attr_setschedparam(&thread_attributes, &thread_parameters);
+  assert(err == 0);
   err = pthread_attr_setinheritsched(&thread_attributes, PTHREAD_EXPLICIT_SCHED);
+  assert(err == 0);
 
   err = pthread_create(&thread_handler, NULL, thread_routine, (void *) &settings);
 

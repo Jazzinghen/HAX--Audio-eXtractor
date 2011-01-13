@@ -78,7 +78,7 @@ int direct_mmap(snd_pcm_t *device, hax_general_settings_t cap_dev_params, hax_ff
 
     rt_timer->start();
 
-    while(1) //main loop
+    while(*cap_dev_params.message) //main loop
     {
         rt_timer->wait_next_activation();
         state = snd_pcm_state(device); //needed for descriptor check

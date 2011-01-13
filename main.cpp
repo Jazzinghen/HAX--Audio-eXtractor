@@ -22,6 +22,7 @@ int main ( int argc, char** argv )
   hax_general_settings_t hax_settings;
   hax_settings.access = 1;
   void ** res = NULL;
+  bool run = true;
 
 
   // Hax Settings Initialisation
@@ -31,6 +32,7 @@ int main ( int argc, char** argv )
   hax_settings.access = 1;
   hax_settings.buffer_size = 2048;//expected buffer size in frames
   hax_settings.period_size = 64;//expected period size in frames
+  hax_settings.message = &run;
 
 
   struct option long_option[] =

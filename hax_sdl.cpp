@@ -7,7 +7,7 @@
 #define DAMP_FACTOR  32767
 
 #define SCREENW 854
-#define SCREENH 480
+#define SCREENH 700
 
 /*
  * This is a 32-bit pixel function created with help from this
@@ -41,32 +41,61 @@ void sine_graph(SDL_Surface *surface, float freq, float amplitude, float displ, 
   //aalineColor(surface, surface->w / 2, surface->h / 2, surface->w / 2 + amplitude * -cos (displ * PI * freq), surface->h / 2 + amplitude * sin (displ * PI * freq), pixel);
 }
 
-void draw_sound(SDL_Surface *surface, int size, int16_t * left_channel, int16_t * right_channel, Uint32 pixel) {
+void draw_sound(SDL_Surface *surface, int size, int16_t * left_channel, int16_t * right_channel, int v_position, int height, Uint32 pixel) {
   int i;
   int step;
 
   step = (int)(((float)surface->w / 2) / size);
 
-  printf("[SDL] Data from L/R channel (SDL Class), frames 24 and 38. L: {%i, %i} R: {%i, %i}\n",
-             left_channel[24], left_channel[38],
-             right_channel[24], right_channel[38]);
+  stringColor(surface, 10, v_position - height + (height / 10), "Amplitude", 0xffffffff);
+  stringColor(surface, (surface->w / 2) - 20, v_position - height + (height / 10), "L", 0xffffffff);
+  stringColor(surface, (surface->w / 2) + 10, v_position - height + (height / 10), "R", 0xffffffff);
+
+  hlineColor(surface, 0, surface->w, v_position, 0xffffffff);
 
   for (i=1; i<size; i++){
-    aalineColor(surface, (surface->w / 2) + ((i-1)*step), ((int)(right_channel[i-1] * (surface->h / 4) / (float)DAMP_FACTOR) + (surface->h / 4)), (surface->w / 2) + (i*step), ((int)(right_channel[i] * (surface->h / 4) / (float)DAMP_FACTOR) + (surface->h / 4)), pixel);
-    aalineColor(surface, (surface->w / 2) - ((i-1)*step), ((int)(left_channel[i-1] * (surface->h / 4) / (float)DAMP_FACTOR) + (surface->h / 4)), (surface->w / 2) - (i*step), ((int)(left_channel[i]  * (surface->h / 4) / (float)DAMP_FACTOR) + (surface->h / 4)), pixel);
+    aalineColor(surface, (surface->w / 2) + ((i-1)*step), ((int)(right_channel[i-1] * height / (float)DAMP_FACTOR) + v_position), (surface->w / 2) + (i*step), ((int)(right_channel[i] * height / (float)DAMP_FACTOR) + v_position), pixel);
+    aalineColor(surface, (surface->w / 2) - ((i-1)*step), ((int)(left_channel[i-1] * height / (float)DAMP_FACTOR) + v_position), (surface->w / 2) - (i*step), ((int)(left_channel[i]  * height / (float)DAMP_FACTOR) + v_position), pixel);
   }
 
 }
 
-void draw_spectrum(SDL_Surface *surface, int size, fftw_complex * left_channel, fftw_complex * right_channel, Uint32 pixel) {
+void draw_imaginary_spectrum(SDL_Surface *surface, int size, fftw_complex * spectrum, int v_position, int height, const char * title, Uint32 pixel) {
   int i;
   int step;
+  char spectrum_title[255];
 
   step = (int)(((float)surface->w / 2) / (size));
 
+  sprintf(spectrum_title, "%s Imaginary Spectrum", title);
+
+  stringColor(surface, 10, v_position - height + (height / 10), spectrum_title, 0xffffffff);
+
+  hlineColor(surface, 0, surface->w, v_position, 0xffffffff);
+
   for (i=1; i < size; i++){
-    aalineColor(surface, (surface->w / 2) + ((i-1)*step), ((int)((right_channel[1][i-1] * (surface->h / 4))) + (3 * surface->h / 4)), (surface->w / 2) + (i*step), ((int)((right_channel[1][i] * (surface->h / 4)) + (3 * surface->h / 4))), pixel);
-    aalineColor(surface, (surface->w / 2) - ((i-1)*step), ((int)((right_channel[1][i-1] * (surface->h / 4))) + (3 * surface->h / 4)), (surface->w / 2) - (i*step), ((int)((right_channel[1][i] * (surface->h / 4)) + (3 * surface->h / 4))), pixel);
+    aalineColor(surface, (surface->w / 2) + ((i-1)*step), ((int)(spectrum[1][i-1] * height) + v_position), (surface->w / 2) + (i*step), ((int)(spectrum[1][i] * height) + v_position), pixel);
+    aalineColor(surface, (surface->w / 2) - ((i-1)*step), ((int)(spectrum[1][i-1] * height) + v_position), (surface->w / 2) - (i*step), ((int)(spectrum[1][i] * height) + v_position), pixel);
+  }
+
+}
+
+void draw_real_spectrum(SDL_Surface *surface, int size, fftw_complex * spectrum, int v_position, int height, const char * title, Uint32 pixel) {
+  int i;
+  int step;
+   char spectrum_title[255];
+
+  step = (int)(((float)surface->w / 2) / (size));
+
+  sprintf(spectrum_title, "%s Real Spectrum", title);
+
+  stringColor(surface, 10, v_position - height + (height / 10), spectrum_title, 0xffffffff);
+
+  hlineColor(surface, 0, surface->w, v_position, 0xffffffff);
+
+  for (i=1; i < size; i++){
+    aalineColor(surface, (surface->w / 2) + ((i-1)*step), ((int)(spectrum[0][i-1] * height) + v_position), (surface->w / 2) + (i*step), ((int)(spectrum[0][i] * height) + v_position), pixel);
+    aalineColor(surface, (surface->w / 2) - ((i-1)*step), ((int)(spectrum[0][i-1] * height) + v_position), (surface->w / 2) - (i*step), ((int)(spectrum[0][i] * height) + v_position), pixel);
   }
 
 }
@@ -162,7 +191,7 @@ void * hax_sdl_main(void *configuration){
     std::cout << "[SDL] " << screen->h/2 << std::endl;
 
     // program main loop
-    bool done = false;
+    // bool done = false;
 
     printf("[SDL] Waiting to start...\n");
     fflush(stdout);
@@ -173,7 +202,7 @@ void * hax_sdl_main(void *configuration){
     printf("[SDL] Firing Loop!\n");
     fflush(stdout);
     std::cout.flush();
-    while (!done)
+    while (*hax_user_settings->message)
     {
         hax_configs->timer->wait_next_activation();
 
@@ -186,7 +215,7 @@ void * hax_sdl_main(void *configuration){
             {
                 // exit if the window is closed
             case SDL_QUIT:
-                done = true;
+                *hax_user_settings->message = false;
                 break;
 
                 // check for keypresses
@@ -194,7 +223,7 @@ void * hax_sdl_main(void *configuration){
                 {
                     // exit if ESCAPE is pressed
                     if (event.key.keysym.sym == SDLK_ESCAPE)
-                        done = true;
+                        *hax_user_settings->message = false;
                     break;
                 }
             } // end switch
@@ -209,9 +238,6 @@ void * hax_sdl_main(void *configuration){
         // SDL_BlitSurface(bmp, 0, screen, &dstrect);
 
         vlineColor(screen, screen->w / 2, 0, screen->h, 0xffffffff);
-        hlineColor(screen, 0, screen->w, screen->h / 4, 0xffffffff);
-
-        hlineColor(screen, 0, screen->w, 3 * screen->h / 4, 0xffffffff);
 
         //sine_graph(screen, 0.01, 60, displ, 0xff00ffff);
 
@@ -223,18 +249,22 @@ void * hax_sdl_main(void *configuration){
           printf("[SDL] Plotting Sound Data!\n");
           fflush(stdout);
           std::cout.flush();
-          draw_sound(screen, hax_sound_data->get_frames(), hax_sound_data->get_left_sound_channel(), hax_sound_data->get_right_sound_channel(), 0xff00ffff);
-          draw_spectrum(screen, (hax_sound_data->get_frames() / 2) + 1, hax_sound_data->get_left_spectrum(), hax_sound_data->get_right_spectrum(), 0x00ffffff );
+          draw_sound(screen, hax_sound_data->get_frames(), hax_sound_data->get_left_sound_channel(), hax_sound_data->get_right_sound_channel(), (screen->h)/7, (screen->h)/7, 0xff00ffff);
+          draw_real_spectrum(screen, hax_sound_data->get_frames(), hax_sound_data->get_right_spectrum(), (screen->h*7)/14, ((screen->h)/14), (char *)"Right", 0x00ffffff );
+          draw_imaginary_spectrum(screen, hax_sound_data->get_frames(), hax_sound_data->get_right_spectrum(), (screen->h*9)/14, ((screen->h)/14), (char *)"Right", 0x00ffffff );
+
+          draw_real_spectrum(screen, hax_sound_data->get_frames(), hax_sound_data->get_left_spectrum(), (screen->h*11)/14, ((screen->h)/14), (char *)"Left", 0x00ffffff);
+          draw_imaginary_spectrum(screen, hax_sound_data->get_frames(), hax_sound_data->get_left_spectrum(), (screen->h*13)/14, ((screen->h)/14), (char *)"Left", 0x00ffffff );
           printf("[SDL] Releasing Locks!\n");
           fflush(stdout);
           std::cout.flush();
         hax_sound_data->unlock_data();
 
         // Draw circle
-        draw_circle(screen, (screen->w / 2), (screen->h / 2), 60, 0xffffffff);
+        //draw_circle(screen, (screen->w / 2), (screen->h / 2), 60, 0xffffffff);
 
-        sprintf(fpscount, "%s%i", "Current FPS: ", SDL_getFramerate(&hax_fps));// + SDL_getFramerate(&hax_fps);
-        stringColor(screen, 10, 10, fpscount, 0xffffffff);
+        //sprintf(fpscount, "%s%i", "Current FPS: ", SDL_getFramerate(&hax_fps));// + SDL_getFramerate(&hax_fps);
+        //stringColor(screen, 10, 10, fpscount, 0xffffffff);
         // DRAWING ENDS HERE
 
         // finally, update the screen :)

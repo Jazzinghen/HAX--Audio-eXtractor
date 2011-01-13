@@ -24,6 +24,7 @@
 
 #include <iostream>
 #include <string>
+#include <cassert>
 
 //#include "hax_threads.hpp"
 
@@ -40,6 +41,7 @@ typedef struct {
     snd_pcm_format_t sample_format;     //format of the samples
     snd_pcm_access_t access_type;       //PCM access type
     int access;                         //Raw Access Mode
+    bool * message;
 } hax_general_settings_t;
 
 
