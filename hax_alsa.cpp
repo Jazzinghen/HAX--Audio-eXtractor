@@ -8,7 +8,6 @@
 
 //Enum needed to choose the type of I/O loop
 typedef enum {
-    METHOD_DIRECT_RW,   //method with direct use of read/write functions
     METHOD_DIRECT_MMAP, //method with direct use of memory mapping
 } enum_io_method;
 
@@ -18,43 +17,6 @@ typedef struct{
     snd_pcm_access_t access; //PCM access type
     int open_mode;           //open function flags
 } io_method_t;
-
-/*******************************************************************************/
-/********************* case: direct with r/w functions *************************/
-/*******************************************************************************/
-//This case only uses a main loop
-int direct_rw(snd_pcm_t *device, hax_general_settings_t cap_dev_params)
-
-{
-    int error;
-    snd_pcm_sframes_t period_size = cap_dev_params.period_size;
-    int n_channels = cap_dev_params.n_channels;
-    short buf[n_channels*period_size];//audio samples buffer
-    signed short *ptr;
-    int cptr;
-
-    while(1)
-    {
-        ptr = buf; //aux pointer in buff
-        cptr = period_size; //aux ptr needed to calculate remained frames
-        //in the most cases readi only uses one bucle
-        while(cptr > 0) {//wait until buf is full with period_size frames
-            error = snd_pcm_readi (device, ptr, cptr);
-            if (error < 0)
-            {
-                if (xrun_recovery(device, error) < 0) {
-                    fprintf(stderr,"microphone: Write error: %s\n", snd_strerror(error));
-                    exit(EXIT_FAILURE);
-                }
-                break; //discard current period
-            }
-            ptr += error * n_channels;
-            cptr -= error;
-        }
-        //write to standard output
-        write(STDOUT_FILENO, buf, sizeof(short)*period_size*n_channels);
-    }
-}
 
 
 int direct_mmap(snd_pcm_t *device, hax_general_settings_t cap_dev_params, hax_fftw_data * shared_data, hax_rt_timer * rt_timer)
@@ -73,7 +35,6 @@ int direct_mmap(snd_pcm_t *device, hax_general_settings_t cap_dev_params, hax_ff
     float average[total_frames];
     int16_t circular_data[CIRCULAR_SAMPLES][total_frames];
 
-    //data = (int16_t *)calloc(period_size * n_channels, sizeof(int16_t));
     memset(average, 0, sizeof(float) * total_frames);
 
     rt_timer->start();
@@ -86,7 +47,7 @@ int direct_mmap(snd_pcm_t *device, hax_general_settings_t cap_dev_params, hax_ff
         {
             case SND_PCM_STATE_XRUN://buffer over-run
                 //fprintf(stderr,"microphone: SND_PCM_STATE_XRUN\n");
-                if (error = xrun_recovery(device, -EPIPE) < 0)
+                if ((error = xrun_recovery(device, -EPIPE)) < 0)
                 {
                     fprintf(stderr,"microphone: XRUN recovery failed: %s\n", snd_strerror(error));
                     return error;
@@ -97,7 +58,7 @@ int direct_mmap(snd_pcm_t *device, hax_general_settings_t cap_dev_params, hax_ff
 
             case SND_PCM_STATE_SUSPENDED://PCM is suspended
             //fprintf(stderr,"microphone: SND_PCM_STATE_SUSPENDED\n");
-                if (error = xrun_recovery(device, -ESTRPIPE) < 0)
+                if ((error = xrun_recovery(device, -ESTRPIPE)) < 0)
                 {
                     fprintf(stderr,"microphone: SUSPEND recovery failed: %s\n", snd_strerror(error));
                     return error;
@@ -109,7 +70,7 @@ int direct_mmap(snd_pcm_t *device, hax_general_settings_t cap_dev_params, hax_ff
         avail = snd_pcm_avail_update(device);
         if (avail < 0)
         {
-            if (error = xrun_recovery(device, avail) < 0) {
+            if ((error = xrun_recovery(device, avail)) < 0) {
                 fprintf(stderr,"microphone: SUSPEND recovery failed: %s\n", snd_strerror(error));
                 return error;
             }
@@ -124,7 +85,7 @@ int direct_mmap(snd_pcm_t *device, hax_general_settings_t cap_dev_params, hax_ff
 					//if the capture from PCM is started (first=1) and one period is ready to process,
 					//the stream must start
                     first = 0;
-                    if (error = snd_pcm_start(device) < 0) {
+                    if ((error = snd_pcm_start(device)) < 0) {
                         fprintf(stderr,"microphone: Start error: %s\n", snd_strerror(error));
                         exit(EXIT_FAILURE);
                     }
@@ -132,7 +93,7 @@ int direct_mmap(snd_pcm_t *device, hax_general_settings_t cap_dev_params, hax_ff
 
                 case 0:
                     //wait for pcm to become ready
-                    if (error = snd_pcm_wait(device, -1)< 0) {
+                    if ((error = snd_pcm_wait(device, -1)) < 0) {
                         if ((error = xrun_recovery(device, error)) < 0) {
                             fprintf(stderr,"microphone: snd_pcm_wait error: %s\n", snd_strerror(error));
                             exit(EXIT_FAILURE);
@@ -194,171 +155,7 @@ int direct_mmap(snd_pcm_t *device, hax_general_settings_t cap_dev_params, hax_ff
         }
 
     }
-    //free(data);
     return 0;
-}
-
-/*******************************************************************************/
-/********************** case: direct with memory mapping ***********************/
-/*******************************************************************************/
-//this case also uses one main loop
-/*
-int direct_mmap(snd_pcm_t *device, hax_general_settings_t cap_dev_params, hax_fftw_data * shared_data, hax_rt_timer * rt_timer)
-{
-    int error, state;
-
-    snd_pcm_sframes_t period_size = cap_dev_params.period_size;//period size in frames
-    int n_channels = cap_dev_params.n_channels;//number of channels
-    const snd_pcm_channel_area_t *my_areas;//mapped memory area info
-    snd_pcm_uframes_t offset, frames, size;//aux for frames count
-    snd_pcm_sframes_t avail, commitres;//aux for frames count
-
-    int first = 1; //first == 1  => first period of the stream is processed now
-    int circular_step = 0;
-    int i, j;
-
-    int16_t average[cap_dev_params.period_size*n_channels];
-    int16_t circular_data[CIRCULAR_SAMPLES][cap_dev_params.period_size*n_channels];
-
-
-    rt_timer->start();
-
-    printf("[ALSA] Audio Capture started.\n");
-
-
-    while(1) //main loop
-    {
-      rt_timer->wait_next_activation();
-      state = snd_pcm_state(device); //needed for descriptor check
-      switch(state)
-      {
-          case SND_PCM_STATE_XRUN://buffer over-run
-              //fprintf(stderr,"microphone: SND_PCM_STATE_XRUN\n");
-              if ((error = xrun_recovery(device, -EPIPE)) < 0)
-              {
-                  fprintf(stderr,"microphone: XRUN recovery failed: %s\n", snd_strerror(error));
-                  return error;
-              }
-      //stream is restarted
-              first = 1;
-              break;
-
-          case SND_PCM_STATE_SUSPENDED://PCM is suspended
-          //fprintf(stderr,"microphone: SND_PCM_STATE_SUSPENDED\n");
-              if ((error = xrun_recovery(device, -ESTRPIPE)) < 0)
-              {
-                  fprintf(stderr,"microphone: SUSPEND recovery failed: %s\n", snd_strerror(error));
-                  return error;
-              }
-              break;
-      }
-
-  //checks how many frames are ready to read or write
-      std::cout << "Update available blocks" << std::endl;
-      avail = snd_pcm_avail_update(device);
-      printf("[ALSA] There is %i data available.\n", (int)avail);
-
-      while (avail < 0)
-      {
-          if ((error = xrun_recovery(device, avail)) < 0) {
-              fprintf(stderr,"microphone: SUSPEND recovery failed: %s\n", snd_strerror(error));
-              return error;
-          }
-          first = 1;
-      }
-      while (avail < period_size)//checks if one period is ready to process
-      {
-          switch(first)
-          {
-              case 1:
-        //if the capture from PCM is started (first=1) and one period is ready to process,
-        //the stream must start
-                  first = 0;
-                  if ((error = snd_pcm_start(device)) < 0) {
-                      fprintf(stderr,"microphone: Start error: %s\n", snd_strerror(error));
-                      exit(EXIT_FAILURE);
-                  }
-                  break;
-
-              case 0:
-                  //wait for pcm to become ready
-                  if ((error = snd_pcm_wait(device, -1)) < 0) {
-                      if ((error = xrun_recovery(device, error)) < 0) {
-                          fprintf(stderr,"microphone: snd_pcm_wait error: %s\n", snd_strerror(error));
-                          exit(EXIT_FAILURE);
-                      }
-                      first = 1;
-                  }
-          }
-          continue;
-      }
-      while (size > 0) //wait until we have period_size frames (in the most cases only one loop is needed)
-      {
-          frames = size;//expected frames number to be processed
-    //frames is a bidirectional variable, this means that the real number of frames processed is written
-    //to this variable by the function.
-          if ((error = snd_pcm_mmap_begin (device, &my_areas, &offset, &frames)) < 0) {
-              if ((error = xrun_recovery(device, error)) < 0) {
-                  fprintf(stderr,"microphone: MMAP begin avail error: %s\n", snd_strerror(error));
-                  exit(EXIT_FAILURE);
-              }
-              first = 1;
-          }
-          //write to standard output
-
-          memcpy(circular_data[circular_step], (void *)((uintptr_t)(my_areas[0].addr)+(offset*sizeof(short)*n_channels)), frames*sizeof(short)*n_channels);
-
-          printf("[ALSA] Data from L/R channel (SDL Class), frames 24 and 38. L: {%i, %i} R: {%i, %i}\n",
-           circular_data[circular_step][48], circular_data[circular_step][76],
-           circular_data[circular_step][49], circular_data[circular_step][77]);
-
-          memset(average, 0, sizeof(int16_t) * frames*sizeof(short)*n_channels);
-
-          for (j = 0; j < CIRCULAR_SAMPLES; j++){
-            for (i = 0; i < (int)cap_dev_params.period_size*2; i++){
-              average[i] += circular_data[j][i] / CIRCULAR_SAMPLES;
-            }
-          }
-
-          printf("[ALSA] Locking Data.\n");
-          shared_data->lock_data();
-            printf("[ALSA] Populating Channels.\n");
-            shared_data->populate_channels(average);
-            printf("[ALSA] Releasing Locks.\n");
-          shared_data->unlock_data();
-
-          commitres = snd_pcm_mmap_commit(device, offset, frames);
-          if (commitres < 0 || (snd_pcm_uframes_t)commitres != frames) {
-              if ((error = xrun_recovery(device, commitres >= 0 ? commitres : -EPIPE)) < 0) {
-                  fprintf(stderr,"microphone: MMAP commit error: %s\n", snd_strerror(error));
-                  exit(EXIT_FAILURE);
-              }
-              first = 1;
-          }
-          size -= frames;//needed in the condition of the while loop to check if period is filled
-      }
-    }
-
-    return 0;
-}
-
-*/
-
-void help(void)
-{
-    printf(
-      "Usage: microphone [OPTIONS]\n"
-      "-h,--help      show this usage help\n"
-      "-d,--device    device of capture\n"
-      "-r,--rate      sample rate in hz\n"
-      "-c,--channels  channels number\n"
-      "-m,--method    I/O method\n"
-      "-p,--period    period size in samples\n"
-      "-b,--buffer    circular buffer size in samples\n"
-      "\n");
-    printf("The I/O methods are:\n");
-    printf("(0) DIRECT_RW\n");
-    printf("(1) DIRECT_MMAP\n");
 }
 
 //recovery callback in case of error
@@ -403,28 +200,13 @@ void * hax_alsa_main(void * settings)
 {
 
     int error,dir;
-    //unsigned int sample_rate = 48000;//expected frame rate
-    //unsigned int real_sample_rate;//real frame rate
-    //int n_channels = 2;//expected number of channels
-    //unsigned int real_n_channels;//real number of channels
-    //char * device_name = "front";
     snd_pcm_t *device;//capture device
     snd_pcm_hw_params_t *hw_params;//hardware configuration structure
     hax_thread_config_t * hax_configs = (hax_thread_config_t *) settings;
     hax_general_settings_t * hax_user_settings = &hax_configs->user_settings;
 
-    /*snd_pcm_sframes_t buffer_size = 2048;//expected buffer size in frames
-    snd_pcm_uframes_t period_size = 8;//expected period size in frames
-    snd_pcm_sframes_t real_buffer_size;//real buffer size in frames
-    snd_pcm_uframes_t real_period_size;//real period size in frames*/
-    //unsigned int buffer_time;//length of the circular buffer in us
-    //unsigned int period_time;//length of one period in us
-    //snd_pcm_format_t real_sample_format;
-    //snd_pcm_access_t real_access;
-
     //array of the available I/O methods defined for capture
     io_method_t methods[] = {
-        { METHOD_DIRECT_RW, SND_PCM_ACCESS_RW_INTERLEAVED, 0 },
         { METHOD_DIRECT_MMAP, SND_PCM_ACCESS_MMAP_INTERLEAVED, 0 },
     };
 
@@ -458,9 +240,6 @@ void * hax_alsa_main(void * settings)
 
     switch(methods[hax_user_settings->access].method)
     {
-        case METHOD_DIRECT_RW:
-            fprintf (stderr, "microphone: capture method: METHOD_DIRECT_RW (m = 0) \n");
-            break;
         case METHOD_DIRECT_MMAP:
             fprintf (stderr, "microphone: capture method: METHOD_DIRECT_MMAP (m = 1)\n");
             break;
@@ -592,25 +371,11 @@ void * hax_alsa_main(void * settings)
     //frees the structure of hardware configuration
     snd_pcm_hw_params_free (hw_params);
 
-/*********************************** filling capture_device_params *************************************/
-
-    /*capture_device_params.access_type = real_access;         //real access method
-    capture_device_params.buffer_size = real_buffer_size;      //real buffer size
-    capture_device_params.period_size = real_period_size;      //real period size
-    capture_device_params.buffer_time = buffer_time;           //real buffer time
-    capture_device_params.period_time = period_time;           //real period time
-    capture_device_params.sample_format = real_sample_format;  //real samples format
-    capture_device_params.sample_rate = real_sample_rate;      //real sample rate
-    capture_device_params.n_channels = n_channels;*/           //real number of channels
 
 /********************** selects the appropriate access method for audio capture *******************/
 
 	switch(methods[hax_user_settings->access].method)
 	{
-		case METHOD_DIRECT_RW:
-			direct_rw(device, *hax_user_settings);
-		break;
-
 		case METHOD_DIRECT_MMAP:
 			direct_mmap(device, *hax_user_settings, (hax_fftw_data *) hax_configs->data_zone, hax_configs->timer);
 		break;

@@ -10,7 +10,7 @@ extern int clock_nanosleep(clockid_t __clock_id, int __flags,
 class hax_rt_timer
 {
   public:
-    hax_rt_timer(uint32_t timer_period, uint64_t timer_offset);
+    hax_rt_timer(uint32_t timer_period, uint64_t timer_offset, const char * name);
     ~hax_rt_timer();
     void wait_next_activation();
     void start();
@@ -22,6 +22,7 @@ class hax_rt_timer
     struct timespec m_nanotime;
     uint32_t m_period;
     uint64_t m_offset;
+    char * thread_name;
 };
 
 #endif // HAX_RT_TIMER_H

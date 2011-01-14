@@ -2,6 +2,7 @@
 
 hax_sdl_data::hax_sdl_data(uint32_t frames)
 {
+  int err = 0;
   pthread_mutexattr_t mutex_attr;
 
   left_sound_channel = (int16_t *) calloc(frames, sizeof(int16_t));
@@ -12,9 +13,13 @@ hax_sdl_data::hax_sdl_data(uint32_t frames)
 
   this->frames = frames;
 
-  pthread_mutexattr_init(&mutex_attr);
-  pthread_mutex_init(&protection_mutex, &mutex_attr);
-  pthread_mutexattr_destroy(&mutex_attr);
+  err = pthread_mutexattr_init(&mutex_attr);
+  assert(err == 0);
+  err = pthread_mutexattr_setprotocol(&mutex_attr, PTHREAD_PRIO_INHERIT);
+  assert(err == 0);
+  err = pthread_mutex_init(&protection_mutex, &mutex_attr);
+  assert(err == 0);
+  err = pthread_mutexattr_destroy(&mutex_attr);
 }
 
 hax_sdl_data::~hax_sdl_data()

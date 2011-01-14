@@ -16,6 +16,20 @@
 
 #define FRAMES 64
 #define START_TIEM 2000000
+#define NSEC_PER_SEC 1000000000ULL
+
+void help(void)
+{
+    printf(
+      "Usage: HAX_Audio_eXtractor [OPTIONS]\n"
+      "-h,--help      show this usage help\n"
+      "-d,--device    device of capture\n"
+      "-r,--rate      sample rate in hz\n"
+      "-c,--channels  channels number\n"
+      "-p,--period    period size in samples\n"
+      "-b,--buffer    circular buffer size in samples\n"
+      "\n");
+}
 
 int main ( int argc, char** argv )
 {
@@ -23,6 +37,7 @@ int main ( int argc, char** argv )
   hax_settings.access = 1;
   void ** res = NULL;
   bool run = true;
+  uint32_t alsa_period;
 
 
   // Hax Settings Initialisation
@@ -41,15 +56,14 @@ int main ( int argc, char** argv )
       {"device", 1, NULL, 'd'},
       {"rate", 1, NULL, 'r'},
       {"channels", 1, NULL, 'c'},
-      {"method", 1, NULL, 'm'},
       {"buffer", 1, NULL, 'b'},
       {"period", 1, NULL, 'p'},
       {"help", 0, NULL, 'h'},
       {NULL, 0, NULL, 0},
-  };//needed for getopt_long
+  };
 
   std::cout << "Parsing Options." << std::endl;
-/************************** processing command line parameters ******************************/
+
   while (1) {
       int c;
       if ((c = getopt_long(argc, argv, "d:r:c:m:b:p:h", long_option, NULL)) < 0)
@@ -69,9 +83,6 @@ int main ( int argc, char** argv )
               hax_settings.n_channels = hax_settings.n_channels < 1 ? 1 : hax_settings.n_channels;
               hax_settings.n_channels = hax_settings.n_channels > 1024 ? 1024 : hax_settings.n_channels;
               break;
-          case 'm':
-              hax_settings.access = atoi(optarg);
-              break;
           case 'b':
               hax_settings.buffer_size = atoi(optarg);
               break;
@@ -86,6 +97,8 @@ int main ( int argc, char** argv )
       }
   };
 
+  alsa_period = (uint32_t)((NSEC_PER_SEC * (float)hax_settings.buffer_size) / (hax_settings.sample_rate * 10));
+
   std::cout << "Creating Data Objects..." << std::endl;
 
   hax_fftw_data * alsa_data = new hax_fftw_data(hax_settings.period_size);
@@ -94,9 +107,9 @@ int main ( int argc, char** argv )
 
   std::cout << "Creating Threads..." << std::endl;
 
-  hax_thread * sdl_thread = new hax_thread(hax_sdl_main, START_TIEM, 16666666, 1, (void *) sdl_data, hax_settings);
-  hax_thread * fftw_thread = new hax_thread(hax_fftw_main, START_TIEM, 8333333, 2, (void *) &hax_fftw_data, hax_settings);
-  hax_thread * alsa_thread = new hax_thread(hax_alsa_main, START_TIEM, 210000, 3, (void *) alsa_data, hax_settings);
+  hax_thread * sdl_thread = new hax_thread(hax_sdl_main, 16666666, START_TIEM, 1, (void *) sdl_data, hax_settings, "SDL");
+  hax_thread * fftw_thread = new hax_thread(hax_fftw_main, 8333333, START_TIEM, 2, (void *) &hax_fftw_data, hax_settings, "FFTW");
+  hax_thread * alsa_thread = new hax_thread(hax_alsa_main, alsa_period, START_TIEM, 3, (void *) alsa_data, hax_settings, "ALSA");
 
 
   std::cout << "Starting Threads..." << std::endl;

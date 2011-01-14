@@ -43,9 +43,9 @@ void sine_graph(SDL_Surface *surface, float freq, float amplitude, float displ, 
 
 void draw_sound(SDL_Surface *surface, int size, int16_t * left_channel, int16_t * right_channel, int v_position, int height, Uint32 pixel) {
   int i;
-  int step;
+  float step;
 
-  step = (int)(((float)surface->w / 2) / size);
+  step = (((float)surface->w / 2) / size);
 
   stringColor(surface, 10, v_position - height + (height / 10), "Amplitude", 0xffffffff);
   stringColor(surface, (surface->w / 2) - 20, v_position - height + (height / 10), "L", 0xffffffff);
@@ -54,18 +54,18 @@ void draw_sound(SDL_Surface *surface, int size, int16_t * left_channel, int16_t 
   hlineColor(surface, 0, surface->w, v_position, 0xffffffff);
 
   for (i=1; i<size; i++){
-    aalineColor(surface, (surface->w / 2) + ((i-1)*step), ((int)(right_channel[i-1] * height / (float)DAMP_FACTOR) + v_position), (surface->w / 2) + (i*step), ((int)(right_channel[i] * height / (float)DAMP_FACTOR) + v_position), pixel);
-    aalineColor(surface, (surface->w / 2) - ((i-1)*step), ((int)(left_channel[i-1] * height / (float)DAMP_FACTOR) + v_position), (surface->w / 2) - (i*step), ((int)(left_channel[i]  * height / (float)DAMP_FACTOR) + v_position), pixel);
+    aalineColor(surface, (int)((surface->w / 2) + ((i-1)*step)), ((int)(right_channel[i-1] * height / (float)DAMP_FACTOR) + v_position), (int)((surface->w / 2) + (i*step)), ((int)(right_channel[i] * height / (float)DAMP_FACTOR) + v_position), pixel);
+    aalineColor(surface, (int)((surface->w / 2) - ((i-1)*step)), ((int)(left_channel[i-1] * height / (float)DAMP_FACTOR) + v_position), (int)((surface->w / 2) - (i*step)), ((int)(left_channel[i]  * height / (float)DAMP_FACTOR) + v_position), pixel);
   }
 
 }
 
 void draw_imaginary_spectrum(SDL_Surface *surface, int size, fftw_complex * spectrum, int v_position, int height, const char * title, Uint32 pixel) {
   int i;
-  int step;
+  float step;
   char spectrum_title[255];
 
-  step = (int)(((float)surface->w / 2) / (size));
+  step = (((float)surface->w / 2) / (size));
 
   sprintf(spectrum_title, "%s Imaginary Spectrum", title);
 
@@ -74,18 +74,18 @@ void draw_imaginary_spectrum(SDL_Surface *surface, int size, fftw_complex * spec
   hlineColor(surface, 0, surface->w, v_position, 0xffffffff);
 
   for (i=1; i < size; i++){
-    aalineColor(surface, (surface->w / 2) + ((i-1)*step), ((int)(spectrum[1][i-1] * height) + v_position), (surface->w / 2) + (i*step), ((int)(spectrum[1][i] * height) + v_position), pixel);
-    aalineColor(surface, (surface->w / 2) - ((i-1)*step), ((int)(spectrum[1][i-1] * height) + v_position), (surface->w / 2) - (i*step), ((int)(spectrum[1][i] * height) + v_position), pixel);
+    aalineColor(surface, (int)((surface->w / 2) + ((i-1)*step)), ((int)(spectrum[1][i-1] * height) + v_position), (int)((surface->w / 2) + (i*step)), ((int)(spectrum[1][i] * height) + v_position), pixel);
+    aalineColor(surface, (int)((surface->w / 2) - ((i-1)*step)), ((int)(spectrum[1][i-1] * height) + v_position), (int)((surface->w / 2) - (i*step)), ((int)(spectrum[1][i] * height) + v_position), pixel);
   }
 
 }
 
 void draw_real_spectrum(SDL_Surface *surface, int size, fftw_complex * spectrum, int v_position, int height, const char * title, Uint32 pixel) {
   int i;
-  int step;
+  float step;
    char spectrum_title[255];
 
-  step = (int)(((float)surface->w / 2) / (size));
+  step = (((float)surface->w / 2) / (size));
 
   sprintf(spectrum_title, "%s Real Spectrum", title);
 
@@ -94,8 +94,8 @@ void draw_real_spectrum(SDL_Surface *surface, int size, fftw_complex * spectrum,
   hlineColor(surface, 0, surface->w, v_position, 0xffffffff);
 
   for (i=1; i < size; i++){
-    aalineColor(surface, (surface->w / 2) + ((i-1)*step), ((int)(spectrum[0][i-1] * height) + v_position), (surface->w / 2) + (i*step), ((int)(spectrum[0][i] * height) + v_position), pixel);
-    aalineColor(surface, (surface->w / 2) - ((i-1)*step), ((int)(spectrum[0][i-1] * height) + v_position), (surface->w / 2) - (i*step), ((int)(spectrum[0][i] * height) + v_position), pixel);
+    aalineColor(surface, (int)((surface->w / 2) + ((i-1)*step)), ((int)(spectrum[0][i-1] * height) + v_position), (int)((surface->w / 2) + (i*step)), ((int)(spectrum[0][i] * height) + v_position), pixel);
+    aalineColor(surface, (int)((surface->w / 2) - ((i-1)*step)), ((int)(spectrum[0][i-1] * height) + v_position), (int)((surface->w / 2) - (i*step)), ((int)(spectrum[0][i] * height) + v_position), pixel);
   }
 
 }
@@ -162,10 +162,8 @@ void * hax_sdl_main(void *configuration){
     FPSmanager hax_fps;
     float displ = 0;
 
-    char fpscount[30];
-
     SDL_initFramerate(&hax_fps);
-    SDL_setFramerate(&hax_fps, 30);
+    SDL_setFramerate(&hax_fps, 60);
 
     // initialize SDL video
     if ( SDL_Init( SDL_INIT_VIDEO ) < 0 )

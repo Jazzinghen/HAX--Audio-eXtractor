@@ -1,7 +1,9 @@
 #include "headers/hax_fftw_data.h"
+#include "headers/hax_generic.hpp"
 
 hax_fftw_data::hax_fftw_data(uint32_t frames)
 {
+  int err;
 
   pthread_mutexattr_t mutex_attr;
 
@@ -9,9 +11,14 @@ hax_fftw_data::hax_fftw_data(uint32_t frames)
   right_sound_channel = (int16_t *) calloc(frames, sizeof(int16_t));
   this->frames = frames;
 
-  pthread_mutexattr_init(&mutex_attr);
-  pthread_mutex_init(&protection_mutex, &mutex_attr);
-  pthread_mutexattr_destroy(&mutex_attr);
+  err = pthread_mutexattr_init(&mutex_attr);
+  assert(err == 0);
+  err = pthread_mutexattr_setprotocol(&mutex_attr, PTHREAD_PRIO_INHERIT);
+  assert(err == 0);
+  err = pthread_mutex_init(&protection_mutex, &mutex_attr);
+  assert(err == 0);
+  err = pthread_mutexattr_destroy(&mutex_attr);
+
 }
 
 hax_fftw_data::~hax_fftw_data()

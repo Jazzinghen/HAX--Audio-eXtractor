@@ -15,7 +15,7 @@ static void hax_fftw_normalize(int16_t * int_channel, double * normalized_channe
 }
 
 static void hax_print_max(fftw_complex * right_data, fftw_complex * left_data, uint32_t frames){
-  int i = 0;
+  uint32_t i = 0;
 
   float lmax, rmax = 0;
 
@@ -24,7 +24,7 @@ static void hax_print_max(fftw_complex * right_data, fftw_complex * left_data, u
     if (right_data[1][i] > rmax) {rmax = right_data[1][i];};
   }
 
-  printf("[FFTW] Maximum Value For Left Spectrum: %f\n", lmax);
+  printf("[FFTW] Maximum Value For Left S pectrum: %f\n", lmax);
   printf("[FFTW] Maximum Value For Right Spectrum: %f\n", rmax);
 };
 

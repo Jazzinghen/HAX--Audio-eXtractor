@@ -30,7 +30,7 @@ class hax_thread {
 
   public:
 
-    hax_thread (void *(* routine)(void *), uint32_t period, uint64_t offset, int priority, void * data, hax_general_settings_t settings);
+    hax_thread (void *(* routine)(void *), uint32_t period, uint64_t offset, int priority, void * data, hax_general_settings_t settings, const char * name);
     int start();
     int join(void ** thread_result);
 };
