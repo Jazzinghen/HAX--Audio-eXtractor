@@ -7,16 +7,15 @@ extern int clock_nanosleep(clockid_t __clock_id, int __flags,
                            __const struct timespec *__req,
                            struct timespec *__rem);
 
-class hax_rt_timer
-{
-  public:
+class hax_rt_timer {
+public:
     hax_rt_timer(uint32_t timer_period, uint64_t timer_offset, const char * name);
     ~hax_rt_timer();
     void wait_next_activation();
     void start();
 
-  protected:
-  private:
+protected:
+private:
     inline void add_us(uint64_t time);
 
     struct timespec m_nanotime;

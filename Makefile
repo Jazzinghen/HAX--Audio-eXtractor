@@ -6,7 +6,7 @@ DIRS := $(shell find . -type d)
 FILES := $(foreach dir, $(DIRS), $(wildcard $(dir)/*.c) \
 		                         $(wildcard $(dir)/*.cpp))
 OBJS := $(addsuffix .o, $(basename $(FILES)))
-APP := hax_spectrum
+APP := HAX_Audio_eXtractor
 
 all: $(OBJS)
 	$(CXX) $(CFLAGS) $(CPPFLAGS) $(LDFLAGS) $(OBJS) -o $(APP)

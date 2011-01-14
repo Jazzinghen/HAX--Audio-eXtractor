@@ -2,12 +2,12 @@
 <CodeBlocks_project_file>
 	<FileVersion major="1" minor="6" />
 	<Project>
-		<Option title="Spectrum_Analyzer" />
+		<Option title="HAX_Audio_eXtractor" />
 		<Option pch_mode="2" />
 		<Option compiler="gcc" />
 		<Build>
 			<Target title="Debug">
-				<Option output="bin/Debug/Spectrum_Analyzer" prefix_auto="1" extension_auto="1" />
+				<Option output="bin/Debug/HAX_Audio_eXtractor" prefix_auto="1" extension_auto="1" />
 				<Option object_output="obj/Debug/" />
 				<Option type="1" />
 				<Option compiler="gcc" />
@@ -20,7 +20,7 @@
 				</Linker>
 			</Target>
 			<Target title="Release">
-				<Option output="bin/Release/Spectrum_Analyzer" prefix_auto="1" extension_auto="1" />
+				<Option output="bin/Release/HAX_Audio_eXtractor" prefix_auto="1" extension_auto="1" />
 				<Option object_output="obj/Release/" />
 				<Option type="0" />
 				<Option compiler="gcc" />
@@ -35,7 +35,7 @@
 			<Add option="`sdl-config --cflags`" />
 		</Compiler>
 		<Linker>
-			<Add option="`sdl-config --libs` -lSDL_gfx -lasound -lfftw3 -lm" />
+			<Add option="`sdl-config --libs` -lSDL_gfx -lasound -lfftw3 -lm -lrt -pthread" />
 		</Linker>
 		<Unit filename="hax_alsa.cpp" />
 		<Unit filename="hax_fftw.cpp" />

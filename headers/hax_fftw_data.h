@@ -3,9 +3,9 @@
 
 #include "hax_generic.hpp"
 
-class hax_fftw_data{
+class hax_fftw_data {
 
-  public:
+public:
     hax_fftw_data(uint32_t frames);
     ~hax_fftw_data();
     void populate_channels(int16_t * data);
@@ -14,8 +14,8 @@ class hax_fftw_data{
     int lock_data();
     int unlock_data();
 
-  protected:
-  private:
+protected:
+private:
 
     int16_t * left_sound_channel;
     int16_t * right_sound_channel;
