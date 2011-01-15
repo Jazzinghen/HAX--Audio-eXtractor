@@ -1,0 +1,52 @@
+<?xml version="1.0" encoding="UTF-8" standalone="yes" ?>
+<CodeBlocks_layout_file>
+	<ActiveTarget name="Debug" />
+	<File name="hax_alsa.cpp" open="1" top="0" tabpos="9">
+		<Cursor position="2453" topLine="339" />
+	</File>
+	<File name="hax_fftw.cpp" open="1" top="0" tabpos="13">
+		<Cursor position="446" topLine="0" />
+	</File>
+	<File name="hax_fftw_data.cpp" open="1" top="0" tabpos="10">
+		<Cursor position="640" topLine="0" />
+	</File>
+	<File name="hax_rt_timer.cpp" open="1" top="0" tabpos="15">
+		<Cursor position="34" topLine="0" />
+	</File>
+	<File name="hax_sdl.cpp" open="1" top="0" tabpos="4">
+		<Cursor position="5780" topLine="13" />
+	</File>
+	<File name="hax_sdl_data.cpp" open="1" top="0" tabpos="14">
+		<Cursor position="94" topLine="0" />
+	</File>
+	<File name="hax_threads.cpp" open="1" top="0" tabpos="2">
+		<Cursor position="688" topLine="1" />
+	</File>
+	<File name="headers/hax_alsa.hpp" open="1" top="0" tabpos="7">
+		<Cursor position="286" topLine="0" />
+	</File>
+	<File name="headers/hax_fftw.h" open="1" top="0" tabpos="12">
+		<Cursor position="131" topLine="0" />
+	</File>
+	<File name="headers/hax_fftw_data.h" open="1" top="0" tabpos="6">
+		<Cursor position="96" topLine="0" />
+	</File>
+	<File name="headers/hax_generic.hpp" open="1" top="0" tabpos="8">
+		<Cursor position="883" topLine="7" />
+	</File>
+	<File name="headers/hax_rt_timer.h" open="1" top="0" tabpos="11">
+		<Cursor position="357" topLine="0" />
+	</File>
+	<File name="headers/hax_sdl.hpp" open="1" top="0" tabpos="5">
+		<Cursor position="27" topLine="0" />
+	</File>
+	<File name="headers/hax_sdl_data.h" open="1" top="0" tabpos="3">
+		<Cursor position="64" topLine="0" />
+	</File>
+	<File name="headers/hax_threads.hpp" open="0" top="0" tabpos="4">
+		<Cursor position="506" topLine="3" />
+	</File>
+	<File name="main.cpp" open="1" top="1" tabpos="1">
+		<Cursor position="502" topLine="12" />
+	</File>
+</CodeBlocks_layout_file>
