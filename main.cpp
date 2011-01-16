@@ -47,7 +47,7 @@ int main ( int argc, char** argv ) {
     hax_settings.sample_rate = 48000; // Default frame rate
     hax_settings.n_channels = 2;      // Default number of channels
     hax_settings.device_name = (char *)"front"; // Default Capture Device
-    hax_settings.access = 1;          // Default access method.
+    hax_settings.access = 0;          // Default access method.
     hax_settings.buffer_size = 2048;  // Default buffer size in frames
     hax_settings.period_size = 256;   // Default period size in frames
     hax_settings.message = &run;      // Pointer to the run flag.
@@ -157,6 +157,8 @@ int main ( int argc, char** argv ) {
     delete sdl_thread;
     delete fftw_thread;
     delete alsa_thread;
+
+    munlockall();
 
     printf("All Done!\n");
 

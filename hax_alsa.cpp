@@ -215,6 +215,7 @@ void * hax_alsa_main(void * settings) {
 
     // Array of the available I/O methods defined for capture, left for extensibility purposes
     io_method_t methods[] = {
+        //  Direct Memory Mapping Method, faster than memory read/write and non blocking
         { METHOD_DIRECT_MMAP, SND_PCM_ACCESS_MMAP_INTERLEAVED, 0 },
     };
 
