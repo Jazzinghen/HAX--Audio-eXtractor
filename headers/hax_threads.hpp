@@ -37,6 +37,7 @@ class hax_thread {
                 void * data,
                 hax_general_settings_t settings,
                 const char * name);
+    ~hax_thread();
     int start();
     int join(void ** thread_result);
 };

@@ -42,6 +42,9 @@ typedef struct {
     snd_pcm_access_t access_type;       //PCM access type
     int access;                         //Raw Access Mode
     bool * message;
+
+    int window_w;
+    int window_h;
 } hax_general_settings_t;
 
 

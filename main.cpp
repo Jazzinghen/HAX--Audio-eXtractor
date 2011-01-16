@@ -4,6 +4,7 @@
 #include <stdlib.h>
 #endif
 
+#include <sys/mman.h>
 
 #include "headers/hax_generic.hpp"
 #include "headers/hax_sdl.hpp"
@@ -18,8 +19,8 @@
 #define START_TIEM 2000000
 #define NSEC_PER_SEC 1000000000ULL
 
-/*  Metal
- *
+/*  Function that prints the help text in case the -h parameter is given
+ *  to the application
  */
 void help(void) {
     printf(
@@ -27,9 +28,10 @@ void help(void) {
         "-h,--help      show this usage help\n"
         "-d,--device    device of capture\n"
         "-r,--rate      sample rate in hz\n"
-        "-c,--channels  channels number\n"
         "-p,--period    period size in samples\n"
         "-b,--buffer    circular buffer size in samples\n"
+        "-w,--width     plotting window width in pixels\n"
+        "-a,--height    plotting window height in pixels\n"
         "\n");
 }
 
@@ -42,22 +44,25 @@ int main ( int argc, char** argv ) {
 
 
     // Hax Settings Initialisation
-    hax_settings.sample_rate = 48000;//expected frame rate
-    hax_settings.n_channels = 2;//expected number of channels
-    hax_settings.device_name = (char *)"front";
-    hax_settings.access = 1;
-    hax_settings.buffer_size = 2048;//expected buffer size in frames
-    hax_settings.period_size = 64;//expected period size in frames
-    hax_settings.message = &run;
+    hax_settings.sample_rate = 48000; // Default frame rate
+    hax_settings.n_channels = 2;      // Default number of channels
+    hax_settings.device_name = (char *)"front"; // Default Capture Device
+    hax_settings.access = 1;          // Default access method.
+    hax_settings.buffer_size = 2048;  // Default buffer size in frames
+    hax_settings.period_size = 256;   // Default period size in frames
+    hax_settings.message = &run;      // Pointer to the run flag.
+    hax_settings.window_w = 800;      // Default Plotting Window Width
+    hax_settings.window_h = 600;      // Default Plotting Window Height
 
 
     struct option long_option[] = {
 
         {"device", 1, NULL, 'd'},
         {"rate", 1, NULL, 'r'},
-        {"channels", 1, NULL, 'c'},
         {"buffer", 1, NULL, 'b'},
         {"period", 1, NULL, 'p'},
+        {"width", 1, NULL, 'w'},
+        {"height", 1, NULL, 'a'},
         {"help", 0, NULL, 'h'},
         {NULL, 0, NULL, 0},
     };
@@ -66,7 +71,7 @@ int main ( int argc, char** argv ) {
 
     while (1) {
         int c;
-        if ((c = getopt_long(argc, argv, "d:r:c:m:b:p:h", long_option, NULL)) < 0)
+        if ((c = getopt_long(argc, argv, "d:r:b:p:a:w:h", long_option, NULL)) < 0)
             break;
         switch (c) {
         case 'd':
@@ -80,20 +85,23 @@ int main ( int argc, char** argv ) {
               hax_settings.sample_rate = 196000;
             }
             break;
-        case 'c':
-            hax_settings.n_channels = atoi(optarg);
-            if (hax_settings.n_channels < 1){
-              hax_settings.n_channels = 1;
-            } else if (hax_settings.n_channels > 1024) {
-              hax_settings.n_channels = 1024;
-            }
-            break;
         case 'b':
             hax_settings.buffer_size = atoi(optarg);
             break;
-            //  buffer_time(us) = 0.001 * buffer_size(frames) / rate(khz)
         case 'p':
             hax_settings.period_size = atoi(optarg);
+            break;
+        case 'w':
+            hax_settings.window_w = atoi(optarg);
+            if (hax_settings.window_w < 150) {
+              hax_settings.window_w = 150;
+            }
+            break;
+        case 'a':
+            hax_settings.window_h = atoi(optarg);
+            if (hax_settings.window_h < 150) {
+              hax_settings.window_h = 150;
+            }
             break;
         case 'h':
             help();
@@ -102,16 +110,24 @@ int main ( int argc, char** argv ) {
         }
     };
 
+
+    // Formula to compute the period for the ALSA Thread
+
     alsa_period = (uint32_t)((NSEC_PER_SEC * (float)hax_settings.buffer_size) / (hax_settings.sample_rate * 10));
 
-    std::cout << "Creating Data Objects..." << std::endl;
+    printf("[MAIN] Creating Data Objects...\n");
 
+    // Creating all the shared memory spaces for the threads
     hax_fftw_data * alsa_data = new hax_fftw_data(hax_settings.period_size);
     hax_sdl_data * sdl_data = new hax_sdl_data(hax_settings.period_size);
     hax_fftw_cross_data_t hax_fftw_data = {sdl_data, alsa_data};
 
-    std::cout << "Creating Threads..." << std::endl;
+    // Locking memory to avoid Major Page Faults
+    mlockall( MCL_CURRENT | MCL_FUTURE );
 
+    printf("[MAIN] Creating Threads...\n");
+
+    // Creating Threads
     hax_thread * sdl_thread = new hax_thread(hax_sdl_main, 16666666, START_TIEM,
                                              1, (void *) sdl_data, hax_settings, "SDL");
     hax_thread * fftw_thread = new hax_thread(hax_fftw_main, 8333333, START_TIEM,
@@ -119,18 +135,30 @@ int main ( int argc, char** argv ) {
     hax_thread * alsa_thread = new hax_thread(hax_alsa_main, alsa_period, START_TIEM,
                                               3, (void *) alsa_data, hax_settings, "ALSA");
 
+    printf("Starting Threads...\n");
 
-    std::cout << "Starting Threads..." << std::endl;
-
+    // Starting Threads
     sdl_thread->start();
     fftw_thread->start();
     alsa_thread->start();
 
-    std::cout << "Joining Threads..." << std::endl;
+    printf("Joining Threads...\n");
 
+    // Waiting for them to terminate
     sdl_thread->join(res);
     fftw_thread->join(res);
     alsa_thread->join(res);
+
+    printf("Cleaning Memory...\n");
+
+    // Clearing memory from all the objects we allocated
+    delete alsa_data;
+    delete sdl_data;
+    delete sdl_thread;
+    delete fftw_thread;
+    delete alsa_thread;
+
+    printf("All Done!\n");
 
     return 0;
 }
